@@ -3,6 +3,7 @@
 import { getDesignOutputPreset, getDesignTemplate } from "@/lib/designTemplates";
 import { clamp, loadImageFromUrl, readableColor } from "@/lib/imageUtils";
 import { getSessionImage } from "@/lib/sessionImageStore";
+import { drawPostKitWatermark } from "@/lib/watermarkPolicy";
 import type { DesignProject, DesignTemplate, RenderResult } from "@/types";
 
 function safeHex(value: string, fallback: string) {
@@ -304,6 +305,10 @@ export async function drawDesignToCanvas(canvas: HTMLCanvasElement, project: Des
 
   applyOverlay(context, { ...project, width: output.width, height: output.height }, template);
   drawText(context, { ...project, width: output.width, height: output.height }, template);
+  drawPostKitWatermark(context, output.width, output.height, {
+    bottomSafeRatio: template.textPosition === "bottom" ? 0.12 : 0.055,
+    rightSafeRatio: template.textPosition === "right" ? 0.1 : 0.045
+  });
 }
 
 export async function renderDesignToBlob(project: DesignProject): Promise<RenderResult> {

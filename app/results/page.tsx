@@ -9,11 +9,13 @@ import { FeedbackActions } from "@/components/FeedbackActions";
 import { PageHeader } from "@/components/PageHeader";
 import { ResultSection } from "@/components/ResultSection";
 import { Badge } from "@/components/ui/Badge";
-import { Card } from "@/components/ui/Card";
 import { Button, LinkButton } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { generateUploadPackageWithAi } from "@/lib/ai/client";
 import { createAiRequestId, createGenerationIdempotencyKey } from "@/lib/ai/validation";
+import { styles } from "@/lib/constants";
 import { downloadJsonFile } from "@/lib/downloadUtils";
+import { getPlatformContentGuide } from "@/lib/platformGuidance";
 import {
   recordCopiedResult,
   recordDislikedResult,
@@ -40,7 +42,7 @@ import type { CreateFormInput, GeneratedPackage, ResultCopyType } from "@/types"
 const sampleInput: CreateFormInput = {
   platform: "Instagram Feed",
   purpose: "Product Promotion",
-  style: "친구한테 말하듯",
+  style: styles[5] ?? styles[0],
   productName: "글로우 립밤",
   requiredKeywords: "촉촉함, 데일리, 선물 추천",
   bannedKeywords: "완벽, 1위",
@@ -50,33 +52,34 @@ const sampleInput: CreateFormInput = {
 
 function createSampleFallbackPackage(requestId: string): GeneratedPackage {
   const now = new Date().toISOString();
+  const guide = getPlatformContentGuide(sampleInput.platform);
 
   return {
     id: `sample-${requestId}`,
-    title: "글로우 립밤 업로드 패키지",
+    title: "글로우 립밤 피드 콘텐츠",
     createdAt: now,
     platform: sampleInput.platform,
     purpose: sampleInput.purpose,
     style: sampleInput.style,
     usedCredits: 0,
     captions: [
-      "오늘 파우치에 하나만 넣는다면 이 립밤. 촉촉함이 오래 남아 데일리로 쓰기 좋아요.",
-      "선물하기 좋은 촉촉한 립밤을 찾고 있다면, 글로우 립밤을 체크해보세요.",
-      "가볍게 바르고 자연스럽게 빛나는 데일리 립 케어 루틴.",
-      "건조한 날에도 입술 컨디션을 편하게 챙기는 작은 추천템.",
-      "부담 없이 쓰기 좋은 촉촉한 립밤, 오늘의 데일리템으로 저장해두세요."
+      "글로우 립밤은 건조한 날 가방에 넣고 다니기 좋은 제품입니다.\n촉촉함이 오래 가고, 데일리로 바르기에도 부담이 적어요.\n비슷한 립밤을 비교 중이라면 저장해두고 확인해보세요.",
+      "입술이 건조할 때 바로 꺼내 쓰기 좋은 립밤을 찾고 있다면\n글로우 립밤은 촉촉함과 휴대성을 같이 보기 좋습니다.\n선물용으로도 괜찮은지 댓글로 의견 남겨주세요.",
+      "선물용 립밤 고를 때는 패키지만큼 실제로 자주 쓸지도 보게 돼요.\n글로우 립밤은 색이 부담스럽지 않고, 데일리로 바르기 편한 쪽입니다.\n자세한 옵션은 프로필에서 확인해보세요.",
+      "글로우 립밤 써보고 괜찮았던 건 촉촉함 쪽이에요.\n가방에 넣고 다니기 편해서 건조할 때 바로 꺼내 쓰기 좋습니다.\n비슷한 제품과 비교 중이라면 이 글을 저장해두세요.",
+      "데일리 립밤 찾는 분이라면 글로우 립밤도 같이 봐도 괜찮아요.\n선물용으로도 과하지 않고, 매일 바르기 편한 사용감이 먼저 느껴집니다.\n궁금한 컬러는 댓글로 남겨주세요."
     ],
-    hashtags: ["#글로우립밤", "#데일리립밤", "#촉촉립밤", "#추천템", "#선물추천"],
-    ctas: ["저장해두고 보기", "친구에게 공유하기", "오늘 루틴에 추가하기", "댓글로 궁금한 점 남기기", "프로필에서 더 보기"],
-    hooks: ["2초 만에 촉촉해 보이는 입술", "파우치에 꼭 넣는 데일리템", "선물용 립밤 고르는 법", "건조한 날 챙겨야 할 한 가지", "자연스러운 윤기 루틴"],
-    thumbnails: ["촉촉한 데일리 립밤", "선물 추천 립 케어", "오늘의 파우치템", "자연스러운 윤기", "저장각 추천템"],
-    disclosure: "#협찬",
-    checklist: ["광고 표시 문구 확인", "필수 키워드 포함 여부 확인", "금지 표현 미사용 확인", "해시태그 수 확인", "최종 게시 전 직접 검토"],
-    packageItems: ["피드용 문구", "스토리용 문구", "릴스 썸네일 문구", "캡션 5개", "해시태그 세트", "CTA 문구", "광고/협찬 표시 문구"],
+    hashtags: ["#글로우립밤", "#데일리립밤", "#촉촉립밤", "#선물템", "#데일리아이템"],
+    ctas: ["저장해두고 필요할 때 다시 확인해보세요.", "어떤 컬러가 더 좋은지 댓글로 남겨주세요.", "자세한 옵션은 프로필에서 확인해보세요."],
+    hooks: [],
+    thumbnails: [],
+    disclosure: "제품을 제공받아 직접 사용해본 뒤 작성했습니다.",
+    checklist: ["본문이 선택한 플랫폼 형식에 맞는지 확인", "광고/협찬 표시가 필요한 경우 앞부분에 배치", "금지 키워드와 과장 표현이 없는지 확인", "해시태그 수와 문구 길이가 적절한지 확인", "복사 후 최종 게시 화면에서 한 번 더 확인"],
+    packageItems: guide.packageItems,
     input: sampleInput,
     aiRequestId: requestId,
     aiFallbackUsed: true,
-    aiWarnings: ["AI API 라우트 응답을 받지 못해 샘플 fallback을 표시했어요."]
+    aiWarnings: ["샘플 결과입니다. 실제 게시 전 문구를 한 번 더 확인해 주세요."]
   };
 }
 
@@ -90,30 +93,26 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+function sectionLines(title: string, items: string[]) {
+  if (items.length === 0) {
+    return [];
+  }
+
+  return ["", `[${title}]`, ...items.map((item, index) => `${index + 1}. ${item}`)];
+}
+
 function composePackage(result: GeneratedPackage) {
+  const guide = getPlatformContentGuide(result.platform);
+
   return [
     result.title,
-    "",
-    "[캡션]",
-    ...result.captions.map((item, index) => `${index + 1}. ${item}`),
-    "",
-    "[해시태그]",
-    result.hashtags.join(" "),
-    "",
-    "[CTA]",
-    ...result.ctas.map((item, index) => `${index + 1}. ${item}`),
-    "",
-    "[후킹 문구]",
-    ...result.hooks.map((item, index) => `${index + 1}. ${item}`),
-    "",
-    "[썸네일 문구]",
-    ...result.thumbnails.map((item, index) => `${index + 1}. ${item}`),
-    "",
-    "[광고/협찬 표시]",
-    result.disclosure,
-    "",
-    "[체크리스트]",
-    ...result.checklist.map((item) => `- ${item}`)
+    ...sectionLines(guide.captionTitle, result.captions),
+    ...(guide.showHashtags ? sectionLines(`해시태그 ${result.hashtags.length}개`, [result.hashtags.join(" ")]) : []),
+    ...sectionLines(guide.ctaTitle, result.ctas),
+    ...sectionLines(guide.hookTitle, result.hooks),
+    ...sectionLines(guide.thumbnailTitle, result.thumbnails),
+    ...sectionLines("광고/협찬 표시 문구", [result.disclosure]),
+    ...sectionLines("업로드 전 체크리스트", result.checklist)
   ].join("\n");
 }
 
@@ -139,7 +138,7 @@ export default function ResultsPage() {
         if (!active) return;
         setResult(current);
         setIsSaved(history.some((item) => item.id === current.id));
-        setSelectedCaptionIndex(0);
+        setSelectedCaptionIndex(current.selectedCaptionIndex ?? 0);
         setIsLoading(false);
         return;
       }
@@ -164,7 +163,7 @@ export default function ResultsPage() {
       if (!active) return;
       setResult(sample);
       setIsSaved(false);
-      setSelectedCaptionIndex(0);
+      setSelectedCaptionIndex(sample.selectedCaptionIndex ?? 0);
       setIsLoading(false);
     }
 
@@ -176,15 +175,6 @@ export default function ResultsPage() {
   }, []);
 
   const allText = useMemo(() => (result ? composePackage(result) : ""), [result]);
-  const selectedCaption = result?.captions[selectedCaptionIndex] ?? "";
-  const resultMetaItems = result
-    ? [
-        { label: "생성일", value: formatDate(result.createdAt) },
-        { label: "플랫폼", value: result.platform },
-        { label: "목적", value: result.purpose },
-        { label: "사용 크레딧", value: `${result.usedCredits} 크레딧` }
-      ]
-    : [];
 
   function flash(message: string) {
     setFeedbackMessage(message);
@@ -218,18 +208,20 @@ export default function ResultsPage() {
       return;
     }
 
+    const selectedCaption = result.captions[selectedCaptionIndex] ?? result.captions[0] ?? "";
     const history = getHistory();
     const exists = history.some((item) => item.id === result.id);
     const nextResult = { ...result, savedToLibrary: true };
     const nextHistory = exists
       ? history.map((item) => (item.id === result.id ? { ...item, package: nextResult } : item))
       : [{ id: result.id, createdAt: result.createdAt, package: nextResult }, ...history].slice(0, 30);
+
     saveHistory(nextHistory);
     saveCurrentResult(nextResult);
     setResult(nextResult);
     setIsSaved(true);
     updatePersonalizationProfile((profile) => recordSavedResult(profile, learningContext(selectedCaption, "caption")));
-    flash("보관함 저장 기록을 내 스타일에 반영했어요.");
+    flash("보관함에 저장했고 학습 스타일에 반영했어요.");
   }
 
   function handleRegenerate() {
@@ -237,15 +229,17 @@ export default function ResultsPage() {
       return;
     }
 
+    const selectedCaption = result.captions[selectedCaptionIndex] ?? result.captions[0] ?? "";
     updatePersonalizationProfile((profile) => recordRegeneration(profile, learningContext(selectedCaption, "caption")));
     savePrefill(result.input);
-    flash("다시 생성 기록을 저장했어요.");
+    flash("다시 생성할 입력값을 만들기 화면으로 보냈습니다.");
     router.push("/create");
   }
 
   function handleSelectCaption(index: number) {
     if (!result) return;
     const caption = result.captions[index];
+
     setSelectedCaptionIndex(index);
     updateResultMeta((current) => ({
       ...current,
@@ -253,7 +247,7 @@ export default function ResultsPage() {
       selectedCaption: caption
     }));
     updatePersonalizationProfile((profile) => recordSelectedCaption(profile, learningContext(caption, "caption")));
-    flash("선택한 캡션을 내 스타일에 반영했어요.");
+    flash("선택한 문구를 학습 스타일에 반영했어요.");
   }
 
   function handleCopied(copyType: ResultCopyType, value: string) {
@@ -274,7 +268,7 @@ export default function ResultsPage() {
   function handleDislike(target: ResultCopyType | "package", value: string) {
     updatePersonalizationProfile((profile) => recordDislikedResult(profile, { ...learningContext(value), target }));
     updateResultMeta((current) => ({ ...current, liked: false, disliked: true }));
-    flash("다음 생성에서는 이 표현을 줄일게요.");
+    flash("다음 생성에서 이 표현은 줄일게요.");
   }
 
   function handleSaveStyle(target: ResultCopyType | "package", value: string) {
@@ -328,7 +322,7 @@ export default function ResultsPage() {
     updatePersonalizationProfile((profile) => recordEditedCaption(profile, { ...learningContext(after, "caption"), before, after }));
     setEditingIndex(null);
     setCaptionDraft("");
-    flash("수정한 말투를 저장했어요.");
+    flash("수정한 문구를 저장했어요.");
   }
 
   async function handleShareReady() {
@@ -336,13 +330,20 @@ export default function ResultsPage() {
       return;
     }
 
-    const shareText = [selectedCaption, "", result.hashtags.join(" "), "", result.disclosure].join("\n");
+    const guide = getPlatformContentGuide(result.platform);
+    const selectedCaption = result.captions[selectedCaptionIndex] ?? result.captions[0] ?? "";
+    const shareText = [
+      selectedCaption,
+      guide.showHashtags ? result.hashtags.join(" ") : "",
+      result.disclosure
+    ].filter(Boolean).join("\n\n");
+
     try {
       await navigator.clipboard.writeText(shareText);
-      setShareStatus("선택한 캡션, 해시태그, 광고 표시 문구가 복사됐습니다.");
+      setShareStatus(`${guide.copyActionLabel}용 문구가 복사됐습니다.`);
       handleCopied("share-ready", shareText);
     } catch {
-      setShareStatus("선택한 캡션과 해시태그를 화면에서 확인해 주세요.");
+      setShareStatus("선택한 문구를 화면에서 확인해 주세요.");
     }
     window.setTimeout(() => setShareStatus(""), 2200);
   }
@@ -361,12 +362,23 @@ export default function ResultsPage() {
         <div className="flex min-h-[60vh] items-center justify-center">
           <div className="rounded-lg border border-line bg-white p-6 text-center shadow-soft">
             <Sparkles className="mx-auto animate-pulse text-coral" size={32} aria-hidden="true" />
-            <p className="mt-3 font-black">업로드 패키지를 준비하는 중</p>
+            <p className="mt-3 font-black">업로드용 결과를 준비하는 중</p>
           </div>
         </div>
       </AppShell>
     );
   }
+
+  const platformGuide = getPlatformContentGuide(result.platform);
+  const selectedCaption = result.captions[selectedCaptionIndex] ?? result.captions[0] ?? "";
+  const resultMetaItems = [
+    { label: "생성일", value: formatDate(result.createdAt) },
+    { label: "플랫폼", value: result.platform },
+    { label: "권장 비율", value: platformGuide.recommendedRatio },
+    { label: "결과 형식", value: platformGuide.resultFormat },
+    { label: "목적", value: result.purpose },
+    { label: "사용 크레딧", value: `${result.usedCredits} 크레딧` }
+  ];
 
   return (
     <AppShell>
@@ -380,27 +392,27 @@ export default function ResultsPage() {
             </Button>
             <Button onClick={handleSave} type="button" variant={isSaved ? "secondary" : "primary"}>
               <Save size={17} aria-hidden="true" />
-              {isSaved ? "보관함 저장됨" : "보관함에 저장"}
+              {isSaved ? "보관함 저장됨" : "보관함 저장"}
             </Button>
             <Button onClick={handleShareReady} type="button" variant="soft">
               <Share2 size={17} aria-hidden="true" />
-              SNS 공유 준비
+              {platformGuide.copyActionLabel}
             </Button>
             <LinkButton href="/studio" onClick={() => saveCurrentResult(result)} variant="secondary">
               <Palette size={17} aria-hidden="true" />
-              디자인 편집
+              {platformGuide.studioActionLabel}
             </LinkButton>
             <LinkButton href="/video-studio" onClick={() => saveCurrentResult(result)} variant="secondary">
               <Video size={17} aria-hidden="true" />
-              영상 만들기
+              {platformGuide.videoActionLabel}
             </LinkButton>
             <LinkButton href="/export" onClick={() => saveCurrentResult(result)} variant="primary">
               <Download size={17} aria-hidden="true" />
-              내보내기 센터
+              {platformGuide.exportActionLabel}
             </LinkButton>
           </>
         }
-        description="생성된 업로드 패키지를 확인하고 복사, 편집, 내보내기를 준비합니다."
+        description={`${platformGuide.label} 기준 결과만 모았습니다. 바로 복사하거나 Studio, Video Studio, Export로 이어갈 수 있습니다.`}
         eyebrow="Results"
         title={result.title}
       />
@@ -443,8 +455,8 @@ export default function ResultsPage() {
             <div className="min-w-0">
               <h2 className="break-keep text-lg font-black">생성 정보</h2>
               <p className="mt-1 break-keep text-sm leading-6 text-muted">
-                현재는 MockProvider가 결과를 만들었고 외부 AI API는 호출하지 않았어요.
-                {result.ai?.personalizationApplied ? " 개인 맞춤 설정 요약이 반영됐습니다." : " 개인 맞춤 학습이 꺼져 있거나 기본 설정만 사용했습니다."}
+                선택한 플랫폼과 입력값을 바탕으로 업로드용 문구를 만들었습니다.
+                {result.ai?.personalizationApplied ? " 개인 맞춤 설정 요약을 반영했습니다." : " 개인 맞춤 학습이 꺼져 있으면 기본 설정만 사용합니다."}
               </p>
               {result.ai?.summary ? <p className="mt-2 text-sm font-bold text-coral [overflow-wrap:anywhere]">{result.ai.summary}</p> : null}
               {result.aiWarnings?.length ? (
@@ -456,9 +468,8 @@ export default function ResultsPage() {
               ) : null}
             </div>
             <div className="flex min-w-0 flex-wrap gap-2 sm:justify-end">
-              <Badge tone={result.aiFallbackUsed ? "lemon" : "mint"}>{result.aiFallbackUsed ? "fallback 표시" : "mock 생성"}</Badge>
-              {result.recommendedDesignTemplateId ? <Badge tone="sky">추천 템플릿 {result.recommendedDesignTemplateId}</Badge> : null}
-              {result.ai?.modelMetadata.retryCount ? <Badge tone="lemon">재시도 {result.ai.modelMetadata.retryCount}회</Badge> : null}
+              <Badge tone="mint">생성 완료</Badge>
+              {result.recommendedDesignTemplateId ? <Badge tone="sky">디자인 후보 {result.recommendedDesignTemplateId}</Badge> : null}
             </div>
           </div>
         </Card>
@@ -469,8 +480,8 @@ export default function ResultsPage() {
           <Card>
             <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
-                <h2 className="break-keep text-lg font-black">선택된 캡션</h2>
-                <p className="mt-1 text-sm leading-6 text-muted [overflow-wrap:anywhere]">{selectedCaption}</p>
+                <h2 className="break-keep text-lg font-black">선택된 {platformGuide.shortLabel} 문구</h2>
+                <p className="mt-1 whitespace-pre-line text-sm leading-6 text-muted [overflow-wrap:anywhere]">{selectedCaption}</p>
                 {result.personalization ? (
                   <p className="mt-3 text-xs font-bold leading-5 text-coral [overflow-wrap:anywhere]">{result.personalization.note}</p>
                 ) : null}
@@ -481,8 +492,9 @@ export default function ResultsPage() {
               </div>
             </div>
           </Card>
+
           <ResultSection
-            description="SNS 본문에 바로 붙여넣을 수 있는 5개 버전입니다."
+            description="SNS 본문에 바로 붙여넣을 수 있는 문구입니다."
             footer={
               <FeedbackActions
                 onDislike={() => handleDislike("caption", selectedCaption)}
@@ -492,10 +504,11 @@ export default function ResultsPage() {
                 onSaveStyle={() => handleSaveStyle("caption", selectedCaption)}
               />
             }
+            itemLabels={platformGuide.captionVariantLabels}
             items={result.captions}
+            onCopyAll={() => handleCopied("caption", result.captions.join("\n"))}
             onCopyItem={(item) => handleCopied("caption", item)}
             onSelect={handleSelectCaption}
-            onCopyAll={() => handleCopied("caption", result.captions.join("\n"))}
             renderItem={(item, index) =>
               editingIndex === index ? (
                 <div className="space-y-3">
@@ -518,69 +531,85 @@ export default function ResultsPage() {
               )
             }
             selectedIndex={selectedCaptionIndex}
-            title="캡션 5개"
+            selectLabel="선택"
+            title={platformGuide.captionTitle}
           />
-          <ResultSection
-            description="필수 키워드와 브랜드 기본 해시태그를 반영했습니다."
-            footer={
-              <FeedbackActions
-                onDislike={() => handleDislike("hashtags", result.hashtags.join(" "))}
-                onLike={() => handleLike("hashtags", result.hashtags.join(" "))}
-                onRegenerate={handleRegenerate}
-                onSaveStyle={() => handleSaveStyle("hashtags", result.hashtags.join(" "))}
-              />
-            }
-            items={result.hashtags}
-            onCopyAll={() => handleCopied("hashtags", result.hashtags.join(" "))}
-            onCopyItem={(item) => handleCopied("hashtags", item)}
-            renderItem={(item) => <span className="inline-flex max-w-full rounded-lg bg-white px-2 py-1 font-bold text-coral [overflow-wrap:anywhere]">{item}</span>}
-            title="해시태그 20개"
-          />
+
+          {platformGuide.showHashtags && result.hashtags.length > 0 ? (
+            <ResultSection
+              description="선택한 플랫폼에 맞게 필요한 만큼만 정리한 해시태그입니다."
+              footer={
+                <FeedbackActions
+                  onDislike={() => handleDislike("hashtags", result.hashtags.join(" "))}
+                  onLike={() => handleLike("hashtags", result.hashtags.join(" "))}
+                  onRegenerate={handleRegenerate}
+                  onSaveStyle={() => handleSaveStyle("hashtags", result.hashtags.join(" "))}
+                />
+              }
+              items={result.hashtags}
+              onCopyAll={() => handleCopied("hashtags", result.hashtags.join(" "))}
+              onCopyItem={(item) => handleCopied("hashtags", item)}
+              renderItem={(item) => <span className="inline-flex max-w-full rounded-lg bg-white px-2 py-1 font-bold text-coral [overflow-wrap:anywhere]">{item}</span>}
+              title={`해시태그 ${result.hashtags.length}개`}
+            />
+          ) : null}
         </div>
 
         <div className="min-w-0 space-y-5">
-          <ResultSection
-            footer={
-              <FeedbackActions
-                onDislike={() => handleDislike("cta", result.ctas.join(" / "))}
-                onLike={() => handleLike("cta", result.ctas.join(" / "))}
-                onRegenerate={handleRegenerate}
-                onSaveStyle={() => handleSaveStyle("cta", result.ctas.join(" / "))}
-              />
-            }
-            items={result.ctas}
-            onCopyAll={() => handleCopied("cta", result.ctas.join("\n"))}
-            onCopyItem={(item) => handleCopied("cta", item)}
-            title="CTA 문구 5개"
-          />
-          <ResultSection
-            footer={
-              <FeedbackActions
-                onDislike={() => handleDislike("hook", result.hooks.join(" / "))}
-                onLike={() => handleLike("hook", result.hooks.join(" / "))}
-                onRegenerate={handleRegenerate}
-                onSaveStyle={() => handleSaveStyle("hook", result.hooks.join(" / "))}
-              />
-            }
-            items={result.hooks}
-            onCopyAll={() => handleCopied("hook", result.hooks.join("\n"))}
-            onCopyItem={(item) => handleCopied("hook", item)}
-            title="릴스 첫 2초 후킹 문구 5개"
-          />
-          <ResultSection
-            footer={
-              <FeedbackActions
-                onDislike={() => handleDislike("thumbnail", result.thumbnails.join(" / "))}
-                onLike={() => handleLike("thumbnail", result.thumbnails.join(" / "))}
-                onRegenerate={handleRegenerate}
-                onSaveStyle={() => handleSaveStyle("thumbnail", result.thumbnails.join(" / "))}
-              />
-            }
-            items={result.thumbnails}
-            onCopyAll={() => handleCopied("thumbnail", result.thumbnails.join("\n"))}
-            onCopyItem={(item) => handleCopied("thumbnail", item)}
-            title="썸네일 문구 5개"
-          />
+          {result.hooks.length > 0 ? (
+            <ResultSection
+              footer={
+                <FeedbackActions
+                  onDislike={() => handleDislike("hook", result.hooks.join(" / "))}
+                  onLike={() => handleLike("hook", result.hooks.join(" / "))}
+                  onRegenerate={handleRegenerate}
+                  onSaveStyle={() => handleSaveStyle("hook", result.hooks.join(" / "))}
+                />
+              }
+              itemLabels={platformGuide.hookVariantLabels}
+              items={result.hooks}
+              onCopyAll={() => handleCopied("hook", result.hooks.join("\n"))}
+              onCopyItem={(item) => handleCopied("hook", item)}
+              title={platformGuide.hookTitle}
+            />
+          ) : null}
+
+          {result.thumbnails.length > 0 ? (
+            <ResultSection
+              footer={
+                <FeedbackActions
+                  onDislike={() => handleDislike("thumbnail", result.thumbnails.join(" / "))}
+                  onLike={() => handleLike("thumbnail", result.thumbnails.join(" / "))}
+                  onRegenerate={handleRegenerate}
+                  onSaveStyle={() => handleSaveStyle("thumbnail", result.thumbnails.join(" / "))}
+                />
+              }
+              itemLabels={platformGuide.thumbnailVariantLabels}
+              items={result.thumbnails}
+              onCopyAll={() => handleCopied("thumbnail", result.thumbnails.join("\n"))}
+              onCopyItem={(item) => handleCopied("thumbnail", item)}
+              title={platformGuide.thumbnailTitle}
+            />
+          ) : null}
+
+          {result.ctas.length > 0 ? (
+            <ResultSection
+              footer={
+                <FeedbackActions
+                  onDislike={() => handleDislike("cta", result.ctas.join(" / "))}
+                  onLike={() => handleLike("cta", result.ctas.join(" / "))}
+                  onRegenerate={handleRegenerate}
+                  onSaveStyle={() => handleSaveStyle("cta", result.ctas.join(" / "))}
+                />
+              }
+              itemLabels={platformGuide.ctaVariantLabels}
+              items={result.ctas}
+              onCopyAll={() => handleCopied("cta", result.ctas.join("\n"))}
+              onCopyItem={(item) => handleCopied("cta", item)}
+              title={platformGuide.ctaTitle}
+            />
+          ) : null}
+
           <ResultSection
             footer={
               <FeedbackActions
@@ -595,12 +624,14 @@ export default function ResultsPage() {
             onCopyItem={(item) => handleCopied("disclosure", item)}
             title="광고/협찬 표시 문구"
           />
+
           <ResultSection
             items={result.checklist}
             onCopyAll={() => handleCopied("checklist", result.checklist.join("\n"))}
             onCopyItem={(item) => handleCopied("checklist", item)}
             title="업로드 전 체크리스트"
           />
+
           <Card>
             <h2 className="break-keep text-lg font-black">내보내기</h2>
             <p className="mt-1 break-keep text-sm leading-6 text-muted">JSON 파일은 mock 저장용으로만 내려받습니다.</p>
@@ -610,13 +641,13 @@ export default function ResultsPage() {
                 JSON 저장
               </Button>
               <LinkButton href="/export" onClick={() => saveCurrentResult(result)} variant="soft">
-                SNS 내보내기
+                {platformGuide.exportActionLabel}
               </LinkButton>
               <LinkButton href="/studio" onClick={() => saveCurrentResult(result)} variant="secondary">
-                디자인 편집
+                {platformGuide.studioActionLabel}
               </LinkButton>
               <LinkButton href="/video-studio" onClick={() => saveCurrentResult(result)} variant="secondary">
-                영상 만들기
+                {platformGuide.videoActionLabel}
               </LinkButton>
               <LinkButton href="/create" variant="soft">
                 새로 만들기

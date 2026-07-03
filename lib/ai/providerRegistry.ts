@@ -1,18 +1,40 @@
 import { mockProvider } from "@/lib/ai/mockProvider";
+import { isOpenAiConfigured, openAiProvider } from "@/lib/ai/openaiProvider";
 import type { AiProvider, AiProviderName } from "@/lib/ai/types";
 
 const providers: Partial<Record<AiProviderName, AiProvider>> = {
-  mock: mockProvider
+  mock: mockProvider,
+  openai: openAiProvider
 };
 
+function configuredProviderName() {
+  return typeof process !== "undefined" ? process.env.AI_PROVIDER?.trim().toLowerCase() : undefined;
+}
+
 export function getActiveProviderName(): AiProviderName {
-  // Server-only future hook. Do not expose API keys or provider secrets to client bundles.
-  const configured = typeof process !== "undefined" ? process.env.AI_PROVIDER : undefined;
-  return configured && Object.prototype.hasOwnProperty.call(providers, configured) ? (configured as AiProviderName) : "mock";
+  const configured = configuredProviderName();
+
+  if (configured === "openai" && isOpenAiConfigured()) {
+    return "openai";
+  }
+
+  return "mock";
 }
 
 export function getAiProvider(name: AiProviderName = getActiveProviderName()) {
   return providers[name] ?? mockProvider;
+}
+
+export function getAiProviderRuntimeStatus() {
+  const requested = configuredProviderName();
+  const selectedProvider = getActiveProviderName();
+
+  return {
+    requestedProvider: requested === "openai" || requested === "mock" ? requested : "mock",
+    selectedProvider,
+    openaiConfigured: isOpenAiConfigured(),
+    fallbackAvailable: true
+  };
 }
 
 export function listAiProviders() {

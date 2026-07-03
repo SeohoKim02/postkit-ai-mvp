@@ -13,8 +13,8 @@ const fallbackBrandProfile: BrandProfile = {
   feedMood: "밝고 정돈된 피드",
   primaryColor: "#ff6b4a",
   secondaryColor: "#edf9f6",
-  favoriteHashtags: "#데일리 #추천템 #소통",
-  requiredPhrases: "저장해두고 보기",
+  favoriteHashtags: "#데일리 #사용후기 #소통",
+  requiredPhrases: "저장해서 비교하기",
   bannedPhrases: "과장된 1위 표현",
   defaultDisclosure: "#광고 또는 #협찬을 첫 문장에 표시",
   preferredPlatform: "Instagram Feed"

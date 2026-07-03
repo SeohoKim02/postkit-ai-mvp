@@ -1,5 +1,6 @@
 "use client";
 
+import { drawPostKitWatermark } from "@/lib/watermarkPolicy";
 import type { DownloadResult, ExportAsset, ExportPackage, ExportPreset } from "@/types";
 
 function getBrowserUnavailableResult(): DownloadResult {
@@ -129,6 +130,11 @@ export async function createMockPreviewBlob(exportPackage: ExportPackage, preset
   context.fillStyle = "#171717";
   context.font = `700 ${Math.max(14, Math.round(width * 0.02))}px sans-serif`;
   context.fillText(`${preset.platform} · ${preset.recommendedAspectRatio} · mock image`, padding * 1.6, height - padding * 1.7);
+
+  drawPostKitWatermark(context, width, height, {
+    bottomSafeRatio: 0.08,
+    rightSafeRatio: 0.055
+  });
 
   return new Promise<Blob | null>((resolve) => {
     canvas.toBlob((blob) => resolve(blob), "image/png", 0.92);

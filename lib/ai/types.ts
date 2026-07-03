@@ -53,6 +53,12 @@ export const AI_ERROR_MESSAGES: Record<AiErrorCode, string> = {
   OUTPUT_VALIDATION_FAILED: "생성 결과 형식이 올바르지 않아요.",
   PRIVACY_RESTRICTION: "개인정보 보호 설정 때문에 생성 요청을 보낼 수 없어요.",
   UNSUPPORTED_TASK: "지원하지 않는 생성 작업이에요.",
+  MISSING_CONFIGURATION: "생성 공급자 설정이 준비되지 않았어요.",
+  TIMEOUT: "생성 요청 시간이 초과됐어요.",
+  RATE_LIMIT: "생성 요청이 잠시 많아요. 다시 시도해 주세요.",
+  AUTHENTICATION_ERROR: "생성 공급자 인증을 확인해 주세요.",
+  INVALID_RESPONSE: "생성 결과 형식이 올바르지 않아요.",
+  VALIDATION_FAILED: "생성 결과 검증에 실패했어요.",
   UNKNOWN_ERROR: "알 수 없는 문제가 생겼어요."
 };
 
@@ -162,7 +168,10 @@ export type AiRecommendDesignResponse = {
 export type AiHealthResponse = {
   ok: boolean;
   provider: AiProviderName;
-  mode: "mock";
+  mode: "mock" | "openai";
+  selectedProvider?: AiProviderName;
+  openaiConfigured?: boolean;
+  fallbackAvailable?: boolean;
   supports: AiTaskType[];
   message: string;
 };

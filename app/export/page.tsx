@@ -26,8 +26,8 @@ import { renderDesignToBlob } from "@/lib/canvasRenderer";
 import { findOutputPresetForExportPreset } from "@/lib/designTemplates";
 import { getLatestDesignForContent, makeDesignFileName, markDesignExported } from "@/lib/designStorage";
 import { createMockPreviewBlob, downloadBlob, downloadExportAsset } from "@/lib/downloadUtils";
-import { addExportHistoryEntry, getExportHistory, getExportPreferences, saveExportPreferences } from "@/lib/exportStorage";
-import { exportPresets, getExportPresetById, getRecommendedPreset } from "@/lib/exportPresets";
+import { addExportHistoryEntry, getExportHistory, saveExportPreferences } from "@/lib/exportStorage";
+import { getExportPresetById, getRecommendedPreset } from "@/lib/exportPresets";
 import {
   applyExportLearning,
   buildDisclosureChecklist,
@@ -37,6 +37,7 @@ import {
   exportLearningWeight
 } from "@/lib/exportUtils";
 import { isWebShareSupported, openPlatformUrl, shareUploadPackage } from "@/lib/shareUtils";
+import { getPlatformContentGuide } from "@/lib/platformGuidance";
 import { getCurrentResult, getHistory, saveCurrentResult, updatePersonalizationProfile } from "@/lib/storage";
 import { getLatestVideoProjectForContent, markVideoProjectDownloaded, markVideoProjectExported, mergeVideoProjectIntoResult, projectToRenderSettings } from "@/lib/video/videoStorage";
 import { getVideoPresetByPlatform } from "@/lib/video/videoPresets";
@@ -122,7 +123,7 @@ function withDesignCanvasAsset(exportPackage: ExportPackage, preset: ExportPrese
 export default function ExportPage() {
   const router = useRouter();
   const [result, setResult] = useState<GeneratedPackage | null>(null);
-  const [selectedPresetId, setSelectedPresetId] = useState(exportPresets[0].id);
+  const [selectedPresetId, setSelectedPresetId] = useState(getRecommendedPreset("Instagram Feed").id);
   const [exportHistory, setExportHistory] = useState<ExportHistoryEntry[]>([]);
   const [feedback, setFeedback] = useState("");
   const [shareSupported, setShareSupported] = useState(false);
@@ -131,20 +132,18 @@ export default function ExportPage() {
 
   useEffect(() => {
     const current = getCurrentResult();
-    const preferences = getExportPreferences();
     setResult(current);
     setExportHistory(getExportHistory());
     setShareSupported(isWebShareSupported());
 
     if (current) {
-      const recommended = preferences.lastSelectedPresetId
-        ? getExportPresetById(preferences.lastSelectedPresetId)
-        : getRecommendedPreset(current.platform);
+      const recommended = getRecommendedPreset(current.platform);
       setSelectedPresetId(recommended.id);
     }
   }, []);
 
   const selectedPreset = getExportPresetById(selectedPresetId);
+  const platformGuide = result ? getPlatformContentGuide(result.platform) : null;
   const latestDesign = useMemo(
     () => (result ? result.designs?.[0] ?? getLatestDesignForContent(result.id) : undefined),
     [result, selectedPresetId, exportHistory.length]
@@ -607,23 +606,23 @@ export default function ExportPage() {
           <>
             <Button disabled={isWorking} onClick={() => handleFullDownload()} type="button" variant="secondary">
               <Download size={17} aria-hidden="true" />
-              전체 다운로드
+              {platformGuide?.exportActionLabel ?? "전체 다운로드"}
             </Button>
-            <Button disabled={isWorking} onClick={() => copyText("전체 업로드 문구", "전체 업로드 문구", fullUploadText)} type="button" variant="soft">
+            <Button disabled={isWorking} onClick={() => copyText(platformGuide?.copyActionLabel ?? "전체 업로드 문구", "전체 업로드 문구", fullUploadText)} type="button" variant="soft">
               <Copy size={17} aria-hidden="true" />
-              전체 문구 복사
+              {platformGuide?.copyActionLabel ?? "전체 문구 복사"}
             </Button>
             <LinkButton href="/studio" onClick={() => result && saveCurrentResult(result)} variant="secondary">
               <ImageIcon size={17} aria-hidden="true" />
-              디자인 편집
+              {platformGuide?.studioActionLabel ?? "디자인 편집"}
             </LinkButton>
             <Button disabled={isWorking} onClick={() => handleShare()} type="button">
               <Share2 size={17} aria-hidden="true" />
-              SNS 공유
+              {platformGuide ? `${platformGuide.shortLabel} 공유 준비` : "SNS 공유"}
             </Button>
           </>
         }
-        description={`${formatDate(result.createdAt)} · ${result.platform} · ${result.purpose} · 다운로드/내보내기 추가 크레딧 0`}
+        description={`${formatDate(result.createdAt)} · ${result.platform} · ${platformGuide?.resultFormat ?? result.purpose} · 다운로드/내보내기 추가 크레딧 0`}
         eyebrow="Export Center"
         title="SNS 내보내기 센터"
       />
@@ -651,13 +650,13 @@ export default function ExportPage() {
             <p className="text-sm font-black text-ink">{latestDesign ? "Studio 실제 디자인 PNG 사용 중" : "아직 Studio 디자인 PNG가 없어요"}</p>
             <p className="mt-1 text-sm leading-6 text-muted">
               {latestDesign
-                ? "다운로드와 Web Share 파일 공유에는 mock 이미지보다 Studio에서 만든 Canvas PNG를 우선 사용합니다."
-                : "Studio에서 업로드 사진과 문구를 합성하면 Export Center에서 실제 PNG를 우선 사용할 수 있어요."}
+                ? `${platformGuide?.shortLabel ?? "SNS"} 내보내기에는 mock 이미지보다 Studio에서 만든 Canvas PNG를 우선 사용합니다.`
+                : `${platformGuide?.studioActionLabel ?? "Studio에서 PNG 만들기"}를 진행하면 Export Center에서 실제 PNG를 우선 사용할 수 있어요.`}
             </p>
           </div>
           <LinkButton href="/studio" onClick={() => result && saveCurrentResult(result)} variant={latestDesign ? "secondary" : "soft"}>
             <ImageIcon size={17} aria-hidden="true" />
-            {latestDesign ? "디자인 다시 열기" : "Studio에서 PNG 만들기"}
+            {latestDesign ? "디자인 다시 열기" : platformGuide?.studioActionLabel ?? "Studio에서 PNG 만들기"}
           </LinkButton>
         </div>
       </div>
@@ -669,7 +668,7 @@ export default function ExportPage() {
             <p className="mt-1 text-sm leading-6 text-muted">
               {latestVideo
                 ? `${latestVideo.platform} · ${latestVideo.durationSeconds}초 · ${videoAsset?.blob ? "세션 WebM Blob 사용 가능" : "Blob은 저장하지 않아 재생성이 필요"}`
-                : "업로드 사진 기반 WebM은 Video Studio에서 만들고, Blob은 현재 브라우저 세션에만 보관합니다."}
+                : `${platformGuide?.videoActionLabel ?? "Video Studio"}은 업로드 사진 기반 WebM을 만들고, Blob은 현재 브라우저 세션에만 보관합니다.`}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -687,7 +686,7 @@ export default function ExportPage() {
             ) : null}
             <Button onClick={openVideoStudio} type="button" variant={latestVideo ? "secondary" : "soft"}>
               <Video size={17} aria-hidden="true" />
-              {latestVideo ? "영상 다시 열기" : "Video Studio 열기"}
+              {latestVideo ? "영상 다시 열기" : platformGuide?.videoActionLabel ?? "Video Studio 열기"}
             </Button>
           </div>
         </div>
@@ -729,28 +728,20 @@ export default function ExportPage() {
           <Card>
             <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
-                <h2 className="break-keep text-lg font-black">플랫폼 프리셋</h2>
-                <p className="mt-1 text-sm text-muted">출력 크기와 문구 기준은 설정 파일에서 한 번만 관리합니다.</p>
+                <h2 className="break-keep text-lg font-black">선택 플랫폼 프리셋</h2>
+                <p className="mt-1 text-sm text-muted">처음 선택한 플랫폼 기준으로 필요한 내보내기 옵션만 표시합니다.</p>
               </div>
               <Badge>{shareSupported ? "Web Share 지원" : "Fallback 준비"}</Badge>
             </div>
-            <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              {exportPresets.map((preset) => (
-                <button
-                  className={`rounded-lg border p-3 text-left transition ${
-                    selectedPresetId === preset.id ? "border-coral bg-blush text-coral" : "border-line bg-wash hover:border-coral/50"
-                  }`}
-                  key={preset.id}
-                  onClick={() => {
-                    setSelectedPresetId(preset.id);
-                    persistPreference(preset);
-                  }}
-                  type="button"
-                >
-                  <span className="block text-sm font-black">{preset.platform}</span>
-                  <span className="mt-1 block text-xs text-muted">{preset.recommendedAspectRatio} · {preset.width}×{preset.height}</span>
-                </button>
-              ))}
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border border-coral bg-blush p-3 text-coral">
+                <span className="block text-sm font-black">{selectedPreset.platform}</span>
+                <span className="mt-1 block text-xs font-bold">{selectedPreset.contentType}</span>
+              </div>
+              <div className="rounded-lg border border-line bg-wash p-3">
+                <span className="block text-sm font-black">{selectedPreset.recommendedAspectRatio}</span>
+                <span className="mt-1 block text-xs text-muted">{selectedPreset.width}×{selectedPreset.height}</span>
+              </div>
             </div>
           </Card>
 
@@ -785,8 +776,8 @@ export default function ExportPage() {
             <p className="mt-1 text-sm text-muted">필요한 문구만 골라 복사하거나 전체 업로드 문구를 한 번에 복사하세요.</p>
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
               {[
-                ["선택한 캡션", "선택한 캡션", exportPackage.selectedCaption],
-                ["전체 캡션", "전체 캡션", exportPackage.captions.join("\n\n")],
+                [platformGuide?.copyActionLabel ?? "선택한 문구", "선택한 문구", exportPackage.selectedCaption],
+                [`전체 ${platformGuide?.shortLabel ?? "SNS"} 문구`, "전체 문구", exportPackage.captions.join("\n\n")],
                 ["해시태그", "해시태그", exportPackage.hashtags.join(" ")],
                 ["CTA", "CTA", exportPackage.ctas.join("\n")],
                 ["광고·협찬 표시 문구", "광고·협찬 표시 문구", exportPackage.disclosure],
@@ -849,26 +840,19 @@ export default function ExportPage() {
 
       <section className="mt-6 space-y-4">
         <div>
-          <h2 className="text-xl font-black">플랫폼별 내보내기 카드</h2>
-          <p className="mt-1 text-sm leading-6 text-muted">각 플랫폼에 맞는 크기, 문구, 공유 준비 상태를 확인하세요.</p>
+          <h2 className="text-xl font-black">{platformGuide?.shortLabel ?? "선택 플랫폼"} 내보내기 카드</h2>
+          <p className="mt-1 text-sm leading-6 text-muted">처음 선택한 플랫폼에 맞는 크기, 문구, 공유 준비 상태만 확인하세요.</p>
         </div>
-        {exportPresets.map((preset) => {
-          const packageForPreset = result ? withDesignCanvasAsset(buildExportPackage(result, preset), preset, latestDesign) : exportPackage;
-          const status = statusLabelFor(exportHistory, result.id, preset.platform);
-          return (
-            <ExportPlatformCard
-              checklist={checklist}
-              exportPackage={packageForPreset}
-              key={preset.id}
-              onCopy={() => copyText("전체 업로드 문구", "전체 업로드 문구", composeFullUploadText(result), preset)}
-              onDownload={() => handleFullDownload(preset)}
-              onOpen={() => handleOpenPlatform(preset)}
-              onShare={() => handleShare(preset)}
-              preset={preset}
-              statusLabel={status}
-            />
-          );
-        })}
+        <ExportPlatformCard
+          checklist={checklist}
+          exportPackage={exportPackage}
+          onCopy={() => copyText(platformGuide?.copyActionLabel ?? "전체 업로드 문구", "전체 업로드 문구", composeFullUploadText(result), selectedPreset)}
+          onDownload={() => handleFullDownload(selectedPreset)}
+          onOpen={() => handleOpenPlatform(selectedPreset)}
+          onShare={() => handleShare(selectedPreset)}
+          preset={selectedPreset}
+          statusLabel={statusLabelFor(exportHistory, result.id, selectedPreset.platform)}
+        />
       </section>
 
       <div className="mobile-fixed-action fixed inset-x-0 bottom-[78px] z-10 border-t border-line bg-white/95 p-3 shadow-lift backdrop-blur lg:hidden">
@@ -879,11 +863,11 @@ export default function ExportPage() {
           </Button>
           <Button className="px-2 text-xs" disabled={isWorking} onClick={() => copyText("전체 업로드 문구", "전체 업로드 문구", fullUploadText)} type="button" variant="soft">
             <Copy size={15} aria-hidden="true" />
-            문구 복사
+            {platformGuide?.shortLabel ?? "SNS"} 문구
           </Button>
           <Button className="px-2 text-xs" disabled={isWorking} onClick={() => handleShare()} type="button">
             <Share2 size={15} aria-hidden="true" />
-            SNS 공유
+            공유 준비
           </Button>
         </div>
       </div>

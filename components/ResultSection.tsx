@@ -7,8 +7,10 @@ export function ResultSection({
   title,
   description,
   items,
+  itemLabels,
   renderItem,
   selectedIndex,
+  selectLabel = "선택",
   onSelect,
   onCopyItem,
   onCopyAll,
@@ -17,8 +19,10 @@ export function ResultSection({
   title: string;
   description?: string;
   items: string[];
+  itemLabels?: string[];
   renderItem?: (item: string, index: number) => ReactNode;
   selectedIndex?: number;
+  selectLabel?: string;
   onSelect?: (index: number) => void;
   onCopyItem?: (item: string, index: number) => void;
   onCopyAll?: () => void;
@@ -42,18 +46,29 @@ export function ResultSection({
             )}
             key={`${title}-${item}-${index}`}
           >
-            <div className="min-w-0 flex-1 text-sm leading-6 text-ink [overflow-wrap:anywhere]">
-              {onSelect ? (
-                <button
-                  className="mb-2 inline-flex min-h-8 min-w-0 max-w-full items-center gap-1 rounded-lg bg-white px-2 text-left text-xs font-black leading-snug text-coral"
-                  onClick={() => onSelect(index)}
-                  type="button"
-                >
-                  <CheckCircle2 size={14} aria-hidden="true" />
-                  {selectedIndex === index ? "선택됨" : "이 캡션 선택"}
-                </button>
+            <div className="min-w-0 flex-1">
+              {(itemLabels?.[index] || onSelect) ? (
+                <div className="mb-3 flex min-w-0 flex-wrap items-center gap-2 border-b border-line pb-2">
+                  {itemLabels?.[index] ? (
+                    <p className="inline-flex max-w-full rounded-lg bg-white px-2 py-1 text-xs font-black leading-snug text-coral">
+                      {itemLabels[index]}
+                    </p>
+                  ) : null}
+                  {onSelect ? (
+                    <button
+                      className="inline-flex min-h-8 min-w-0 max-w-full items-center gap-1 rounded-lg bg-white px-2 text-left text-xs font-black leading-snug text-coral"
+                      onClick={() => onSelect(index)}
+                      type="button"
+                    >
+                      <CheckCircle2 size={14} aria-hidden="true" />
+                      {selectedIndex === index ? "선택됨" : selectLabel}
+                    </button>
+                  ) : null}
+                </div>
               ) : null}
-              {renderItem ? renderItem(item, index) : item}
+              <div className="min-w-0 whitespace-pre-line text-sm leading-6 text-ink [overflow-wrap:anywhere]">
+                {renderItem ? renderItem(item, index) : item}
+              </div>
             </div>
             <CopyButton onCopied={() => onCopyItem?.(item, index)} value={item} />
           </div>

@@ -175,9 +175,12 @@ export function platformToDeliverableLabel(platform: Platform): DeliverableType 
   const map: Record<Platform, DeliverableType> = {
     "Instagram Feed": "Instagram 피드",
     "Instagram Story": "Instagram 스토리",
+    "Instagram Reels": "Instagram 릴스",
     "Reels Thumbnail": "Instagram 릴스",
     TikTok: "TikTok",
-    "YouTube Shorts": "YouTube Shorts"
+    "YouTube Shorts": "YouTube Shorts",
+    Facebook: "Facebook 게시물",
+    X: "X 게시물"
   };
 
   return map[platform];

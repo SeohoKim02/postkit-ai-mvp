@@ -2,8 +2,8 @@ import { CheckCircle2, Hash, ImagePlus, MessageSquareText, MousePointerClick, Up
 
 const previewItems = ["캡션 5개", "해시태그 20개", "CTA 5개", "후킹 문구 5개"];
 const resultItems = [
-  { label: "캡션", value: "오늘 업로드는 촉촉함이 오래 남는 글로우 립밤으로 준비했어요.", icon: MessageSquareText },
-  { label: "해시태그", value: "#데일리 #추천템 #선물추천", icon: Hash },
+  { label: "캡션", value: "촉촉함이 오래 남는 글로우 립밤, 매일 쓰기 좋은 데일리템으로 저장해두세요.", icon: MessageSquareText },
+  { label: "해시태그", value: "#데일리 #사용후기 #선물템", icon: Hash },
   { label: "CTA", value: "저장해두고 컬러 고를 때 다시 보기", icon: MousePointerClick }
 ];
 

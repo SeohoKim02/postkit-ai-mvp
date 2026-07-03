@@ -56,6 +56,7 @@ import {
   getTopStyle
 } from "@/lib/personalization";
 import { commercialRelationshipOptions, rightsConfirmationItems, sensitiveInfoItems } from "@/lib/privacyContent";
+import { getPlatformContentGuide, normalizePlatform } from "@/lib/platformGuidance";
 import { addConsentRecord, addPrivacyAuditEvent, getPrivacyPreferences } from "@/lib/privacyStorage";
 import { associateSessionImageWithContent, getSupportedStudioImageTypes, storeSessionImage } from "@/lib/sessionImageStore";
 import {
@@ -102,13 +103,16 @@ const disclosureOptions: { label: string; value: SponsorDisclosure }[] = [
 const platformMeta: Record<Platform, { description: string; icon: ReactNode }> = {
   "Instagram Feed": { description: "피드 본문과 저장 유도 캡션", icon: <Instagram size={18} aria-hidden="true" /> },
   "Instagram Story": { description: "짧고 바로 반응하는 문구", icon: <RectangleHorizontal size={18} aria-hidden="true" /> },
-  "Reels Thumbnail": { description: "첫 화면에서 멈추게 하는 썸네일", icon: <Clapperboard size={18} aria-hidden="true" /> },
+  "Instagram Reels": { description: "짧은 훅과 릴스 캡션", icon: <Clapperboard size={18} aria-hidden="true" /> },
+  "Reels Thumbnail": { description: "짧은 훅과 릴스 캡션", icon: <Clapperboard size={18} aria-hidden="true" /> },
   TikTok: { description: "짧고 강한 후킹 중심", icon: <Video size={18} aria-hidden="true" /> },
-  "YouTube Shorts": { description: "쇼츠 피드에서 읽히는 카피", icon: <Youtube size={18} aria-hidden="true" /> }
+  "YouTube Shorts": { description: "쇼츠 제목과 설명 문구", icon: <Youtube size={18} aria-hidden="true" /> },
+  Facebook: { description: "설명형 본문과 공유 유도", icon: <MessageCircle size={18} aria-hidden="true" /> },
+  X: { description: "짧고 명확한 한두 문장", icon: <Zap size={18} aria-hidden="true" /> }
 };
 
 const purposeMeta: Record<Purpose, { description: string; icon: ReactNode }> = {
-  "Personal Post": { description: "일상처럼 자연스럽게", icon: <MessageCircle size={18} aria-hidden="true" /> },
+  "Personal Post": { description: "개인 계정에 어울리는 소개", icon: <MessageCircle size={18} aria-hidden="true" /> },
   "Sponsored Post": { description: "신뢰가 남는 협찬 소개", icon: <BadgeCheck size={18} aria-hidden="true" /> },
   "Product Promotion": { description: "장점과 구매 포인트 강조", icon: <Megaphone size={18} aria-hidden="true" /> },
   "New Arrival": { description: "신상 느낌을 빠르게 전달", icon: <Sparkles size={18} aria-hidden="true" /> },
@@ -117,8 +121,8 @@ const purposeMeta: Record<Purpose, { description: string; icon: ReactNode }> = {
 };
 
 const styleDescriptions: Record<StyleTone, string> = {
-  감성형: "분위기와 감정 중심",
-  "깔끔한 정보형": "핵심 정보가 빠르게 보임",
+  감성형: "차분하고 부드러운 문장",
+  "깔끔한 정보형": "정보가 빠르게 보임",
   "자연스러운 후기형": "직접 써본 듯한 문장",
   "광고 강한 판매형": "구매 전환에 집중",
   "고급 브랜드형": "차분하고 세련된 톤",
@@ -128,8 +132,8 @@ const styleDescriptions: Record<StyleTone, string> = {
 };
 
 const steps = [
-  "업로드",
   "플랫폼",
+  "업로드",
   "목적",
   "스타일",
   "세부 정보",
@@ -144,6 +148,7 @@ const defaultRightsChecks = rightsConfirmationItems.reduce<Record<string, boolea
 export default function CreatePage() {
   const router = useRouter();
   const [input, setInput] = useState<CreateFormInput>(defaultInput);
+  const [selectedPlatform, setSelectedPlatform] = useState<Platform | null>(null);
   const [brand, setBrand] = useState<BrandProfile>(defaultBrandProfile);
   const [personalization, setPersonalization] = useState<PersonalizationProfile | null>(null);
   const [privacyPreferences, setPrivacyPreferences] = useState<PrivacyPreferences>(() => getPrivacyPreferences());
@@ -164,15 +169,17 @@ export default function CreatePage() {
     setPersonalization(savedPersonalization);
     setPrivacyPreferences(getPrivacyPreferences());
     setCreditAccount(getCreditAccount());
-    setInput(
-      prefill ?? {
+    const nextInput: CreateFormInput = prefill
+      ? { ...prefill, platform: normalizePlatform(prefill.platform) }
+      : {
         ...defaultInput,
         platform: getTopPlatform(savedPersonalization),
         purpose: getTopPurpose(savedPersonalization),
         style: getTopStyle(savedPersonalization),
         sponsorDisclosure: savedPersonalization.accountType === "광고/제휴 계정" ? "ad" : "none"
-      }
-    );
+      };
+    setInput(nextInput);
+    setSelectedPlatform(prefill ? normalizePlatform(prefill.platform) : null);
     clearPrefill();
   }, []);
 
@@ -193,7 +200,9 @@ export default function CreatePage() {
     [creditAccount.totalCreditBalance]
   );
 
+  const selectedPlatformGuide = selectedPlatform ? getPlatformContentGuide(selectedPlatform) : null;
   const missingFields = [
+    !selectedPlatform ? "게시 플랫폼" : "",
     !input.uploadedFileName ? "사진 또는 영상 자료" : "",
     !input.productName.trim() ? "제품명 또는 콘텐츠 이름" : ""
   ].filter(Boolean);
@@ -202,11 +211,16 @@ export default function CreatePage() {
   const commercialRelationshipType = input.commercialRelationshipType ?? "none";
   const hasCommercialRelationship = commercialRelationshipType !== "none";
   const disclosureMissingForRelationship = hasCommercialRelationship && input.sponsorDisclosure === "none";
-  const currentStep = !input.uploadedFileName ? 1 : !input.productName.trim() ? 5 : 6;
+  const currentStep = !selectedPlatform ? 1 : !input.uploadedFileName ? 2 : !input.productName.trim() ? 5 : 6;
 
   function updateInput<K extends keyof CreateFormInput>(key: K, value: CreateFormInput[K]) {
     setInput((current) => ({ ...current, [key]: value }));
     setError("");
+  }
+
+  function handleSelectPlatform(platform: Platform) {
+    setSelectedPlatform(platform);
+    updateInput("platform", platform);
   }
 
   function updateRightsCheck(id: string, checked: boolean) {
@@ -291,6 +305,11 @@ export default function CreatePage() {
 
     setError("");
 
+    if (!selectedPlatform) {
+      setError("먼저 어디에 올릴 콘텐츠인지 선택해 주세요.");
+      return;
+    }
+
     if (missingFields.length > 0) {
       setError(`${missingFields.join(", ")}을(를) 입력하면 업로드 패키지를 만들 수 있습니다.`);
       return;
@@ -304,6 +323,7 @@ export default function CreatePage() {
     const rightsConfirmedAt = new Date().toISOString();
     const validation = validateCreateInputForAi({
       ...input,
+      platform: selectedPlatform,
       rightsConfirmedAt
     });
 
@@ -444,7 +464,7 @@ export default function CreatePage() {
             {missingFields.length > 0 ? "필수 입력 필요" : "생성 준비 완료"}
           </Badge>
         }
-        description="자료를 넣고 플랫폼, 목적, 스타일을 고르면 업로드 직전 패키지가 생성됩니다."
+        description="먼저 게시할 플랫폼을 고른 뒤 목적, 톤, 제품/주제, 장점을 입력하면 업로드 직전 문구가 생성됩니다."
         eyebrow="Create"
         title="사진 넣고 업로드 패키지 만들기"
       />
@@ -468,11 +488,59 @@ export default function CreatePage() {
         })}
       </div>
 
-      <div className="mt-6 grid min-w-0 gap-5 xl:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)]">
+      <Card className="mt-6">
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <h2 className="break-keep text-lg font-black">1. 게시할 플랫폼/형식 선택</h2>
+            <p className="mt-1 break-keep text-sm leading-6 text-muted">여기서 고른 한 가지 플랫폼 기준으로 본문, 훅, CTA, 해시태그, 내보내기 안내가 정리됩니다.</p>
+          </div>
+          <Badge tone={selectedPlatform ? "mint" : "lemon"}>{selectedPlatform ? "플랫폼 선택됨" : "먼저 선택"}</Badge>
+        </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {platforms.map((platform, index) => {
+            const guide = getPlatformContentGuide(platform);
+
+            return (
+              <ChoiceCard
+                description={`${index + 1}. ${guide.createDescription}`}
+                icon={platformMeta[platform].icon}
+                key={platform}
+                onClick={() => handleSelectPlatform(platform)}
+                selected={selectedPlatform === platform}
+                title={guide.label}
+              />
+            );
+          })}
+        </div>
+
+        <div className="mt-5 grid min-w-0 gap-3 rounded-lg border border-line bg-wash p-4 min-[430px]:grid-cols-3">
+          <div className="min-w-0">
+            <p className="text-xs font-black text-muted">선택한 플랫폼</p>
+            <p className="mt-1 break-keep text-sm font-black text-ink">{selectedPlatformGuide?.label ?? "아직 선택하지 않음"}</p>
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-black text-muted">권장 비율</p>
+            <p className="mt-1 break-keep text-sm font-black text-ink">{selectedPlatformGuide?.recommendedRatio ?? "선택 후 표시"}</p>
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-black text-muted">결과 형식</p>
+            <p className="mt-1 break-keep text-sm font-black leading-snug text-ink [overflow-wrap:anywhere]">{selectedPlatformGuide?.resultFormat ?? "플랫폼별 문구로 정리"}</p>
+          </div>
+        </div>
+      </Card>
+
+      {!selectedPlatform ? (
+        <div className="mt-4 rounded-lg border border-lemon/40 bg-yellow-50 p-4 text-sm font-bold leading-6 text-yellow-800">
+          플랫폼을 선택하면 아래의 업로드, 목적, 톤, 제품/주제, 장점 입력이 활성화됩니다.
+        </div>
+      ) : null}
+
+      <div className={`mt-6 grid min-w-0 gap-5 xl:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] ${selectedPlatform ? "" : "pointer-events-none opacity-50"}`}>
         <Card>
           <div className="flex min-w-0 items-center justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="break-keep text-lg font-black">1. 사진 또는 영상 업로드</h2>
+              <h2 className="break-keep text-lg font-black">2. 사진 또는 영상 업로드</h2>
               <p className="mt-1 text-sm text-muted">브라우저 안에서만 미리보며 서버로 전송하지 않습니다.</p>
             </div>
             <UploadCloud className="text-coral" size={22} aria-hidden="true" />
@@ -548,9 +616,9 @@ export default function CreatePage() {
           <Card>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
-                <h2 className="break-keep text-lg font-black">2-4. 생성 방향 선택</h2>
+                <h2 className="break-keep text-lg font-black">3-4. 목적과 톤 선택</h2>
                 <p className="mt-1 text-sm text-muted">
-                  {brand.accountName} 프로필과 {personalization?.preferredTone ?? "기본"} 말투 기준으로 결과가 조정됩니다.
+                  {selectedPlatformGuide ? `${selectedPlatformGuide.label}에 맞춰 ` : ""}{brand.accountName} 프로필과 {personalization?.preferredTone ?? "기본"} 말투 기준으로 결과가 조정됩니다.
                 </p>
               </div>
               <LinkButton className="w-full sm:w-auto" href="/settings" variant="secondary">
@@ -559,25 +627,6 @@ export default function CreatePage() {
             </div>
 
             <div className="mt-5 space-y-5">
-              <div>
-                <div className="mb-3 flex flex-col gap-2 min-[430px]:flex-row min-[430px]:items-center min-[430px]:justify-between">
-                  <h3 className="text-sm font-black">플랫폼 선택</h3>
-                  <Badge tone="sky">{input.platform}</Badge>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {platforms.map((platform) => (
-                    <ChoiceCard
-                      description={platformMeta[platform].description}
-                      icon={platformMeta[platform].icon}
-                      key={platform}
-                      onClick={() => updateInput("platform", platform)}
-                      selected={input.platform === platform}
-                      title={platform}
-                    />
-                  ))}
-                </div>
-              </div>
-
               <div>
                 <div className="mb-3 flex flex-col gap-2 min-[430px]:flex-row min-[430px]:items-center min-[430px]:justify-between">
                   <h3 className="text-sm font-black">게시물 목적 선택</h3>
@@ -618,7 +667,7 @@ export default function CreatePage() {
           </Card>
 
           <Card>
-            <h2 className="text-lg font-black">5. 세부 정보 입력</h2>
+            <h2 className="text-lg font-black">5. 제품/주제와 장점 입력</h2>
             {input.campaignId || input.scheduleId ? (
               <div className="mt-4 rounded-lg border border-sky/20 bg-sky/5 p-4">
                 <p className="text-sm font-black text-sky">캠페인·일정 연결됨</p>
@@ -634,21 +683,21 @@ export default function CreatePage() {
             ) : null}
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <label className="sm:col-span-2">
-                <span className="field-label">제품명 또는 콘텐츠 이름</span>
+                <span className="field-label">제품명 또는 콘텐츠 주제</span>
                 <input
                   className="field"
                   onChange={(event) => updateInput("productName", event.target.value)}
-                  placeholder="예: 글로우 립밤, 신상 니트, 카페 메뉴"
+                  placeholder="예: 흑백요리사 캐비어, 여름용 린넨 셔츠, 카페 딸기라떼"
                   value={input.productName}
                 />
               </label>
 
               <label>
-                <span className="field-label">필수 키워드</span>
+                <span className="field-label">장점/타겟/필수 키워드</span>
                 <textarea
                   className="field min-h-28 resize-none"
                   onChange={(event) => updateInput("requiredKeywords", event.target.value)}
-                  placeholder="예: 촉촉함, 데일리, 선물 추천"
+                  placeholder="예: 고급스러운 식탁, 와인 안주, 선물용"
                   value={input.requiredKeywords}
                 />
               </label>
@@ -746,7 +795,7 @@ export default function CreatePage() {
                 </div>
                 <Button className="w-full sm:w-auto" disabled={isGenerating} onClick={handleGenerate} type="button">
                   {isGenerating ? <Loader2 className="animate-spin" size={17} aria-hidden="true" /> : <Zap size={17} aria-hidden="true" />}
-                  업로드 패키지 생성
+                  {selectedPlatformGuide ? `${selectedPlatformGuide.shortLabel} 콘텐츠 생성` : "플랫폼 선택 후 생성"}
                 </Button>
               </div>
             </div>

@@ -241,8 +241,10 @@ export function purposeFromCampaignType(campaignType: string): Purpose {
 
 export function platformFromDeliverable(label: string): Platform {
   if (label.includes("스토리")) return "Instagram Story";
-  if (label.includes("릴스")) return "Reels Thumbnail";
+  if (label.includes("릴스")) return "Instagram Reels";
   if (label.includes("TikTok")) return "TikTok";
   if (label.includes("Shorts")) return "YouTube Shorts";
+  if (label.includes("Facebook")) return "Facebook";
+  if (label.includes("X")) return "X";
   return "Instagram Feed";
 }

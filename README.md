@@ -8,7 +8,7 @@ PostKit은 CapCut처럼 영상 편집을 하거나 Canva처럼 디자인을 직�
 
 현재 소스는 `PostKit MVP RC-0.3` 배포 준비 상태입니다. RC-0.2 기능을 유지한 채 반응형 레이아웃 QA와 Vercel/GitHub 배포 문서 정리를 반영했습니다.
 
-이번 정리는 새 기능 추가가 아니라 배포 준비 점검입니다. 기존 기능, 가격 정책, 크레딧 정책, 개인정보 정책, 계정/mock/AI/SNS/영상 정책은 변경하지 않았고 실제 로그인/OAuth/DB/클라우드/결제/SNS API/AI API/API 키/환경변수/외부 패키지를 추가하지 않았습니다.
+RC-0.3 배포 준비 정리 당시에는 실제 로그인/OAuth/DB/클라우드/결제/SNS API/AI API/API 키/환경변수/외부 패키지를 추가하지 않았습니다. 이후 선택적 OpenAI Provider 1단계가 추가되었지만 Production 기본값은 계속 `mock`이며, 실제 키 값은 코드와 문서에 포함하지 않습니다.
 
 검증 상태:
 
@@ -33,7 +33,8 @@ PostKit은 CapCut처럼 영상 편집을 하거나 Canva처럼 디자인을 직�
 - 실행 전 통합 안정화 및 정적 무결성 검토 반영
 - mock AI 생성 함수 구현 완료
 - localStorage 기반 설정/결과/히스토리/개인화/크레딧 원장/내보내기/캘린더/캠페인/개인정보/계정/워크스페이스 저장 구현 완료
-- 실제 회원가입, 로그인, 클라우드 저장, AI API, 결제, SNS 업로드 API 연동 없음
+- 실제 회원가입, 로그인, 클라우드 저장, 결제, SNS 업로드 API 연동 없음
+- AI 생성은 기본 mock이며, 서버 환경변수로만 켤 수 있는 선택적 OpenAI Provider 1단계 추가
 - API 키나 시크릿 하드코딩 없음
 - `typecheck`와 `build` 검증 통과
 
@@ -166,7 +167,11 @@ PWA 아이콘 TODO:
 
 ## AI 서비스 계층 v1
 
-현재 생성 흐름은 외부 AI API를 호출하지 않고 MockProvider를 사용합니다. 다만 Create와 Results는 더 이상 `mockAi`를 직접 호출하지 않고 내부 API 라우트와 AI 클라이언트 계층을 거칩니다.
+기본 생성 흐름은 MockProvider를 사용합니다. `AI_PROVIDER=mock`이거나 OpenAI 환경변수가 없으면 기존 mock/localStorage 기반 동작이 그대로 유지됩니다. 실제 AI 테스트가 필요할 때만 서버 환경변수에 `AI_PROVIDER=openai`, `OPENAI_API_KEY`, `OPENAI_MODEL`을 설정합니다.
+
+OpenAI 연결은 서버 API route에서만 실행되며 클라이언트 컴포넌트, localStorage, 브라우저 번들에 API 키를 넣지 않습니다. OpenAI 호출이 실패하거나 응답 검증에 실패하면 MockProvider가 장애 fallback으로 유지됩니다. 환경변수 변경 후에는 개발 서버 또는 배포 환경을 재시작해야 합니다.
+
+Vercel에서는 Preview와 Production 환경변수를 분리해서 설정하고, Production 적용 전 Preview 배포에서 먼저 `/api/ai/health`, `/create`, `/results` 흐름을 확인합니다. 실제 API 키 예시는 문서나 코드에 작성하지 않습니다.
 
 구성:
 
@@ -174,7 +179,8 @@ PWA 아이콘 TODO:
 - `lib/ai/promptBuilder.ts`: 브랜드, 개인화, 캠페인, 목적, 플랫폼 기반 안전 프롬프트 컨텍스트 구성
 - `lib/ai/validation.ts`: 외부 패키지 없는 입력/출력 검증, requestId/idempotencyKey 생성
 - `lib/ai/mockProvider.ts`: 기존 mock AI 결과를 공급자 인터페이스 뒤에서 실행
-- `lib/ai/providerRegistry.ts`: 현재는 MockProvider만 등록, 향후 실제 공급자 추가 위치
+- `lib/ai/openaiProvider.ts`: 서버 전용 OpenAI Responses API provider, Structured Output 검증, timeout, fallback 처리
+- `lib/ai/providerRegistry.ts`: `AI_PROVIDER`, `OPENAI_API_KEY`, `OPENAI_MODEL` 기준으로 mock/openai provider 선택
 - `lib/ai/client.ts`: 브라우저에서 `/api/ai/*`만 호출하는 클라이언트 래퍼
 - `lib/ai/requestStorage.ts`: 민감 원문 없는 AI 요청 기록 저장
 
@@ -189,10 +195,10 @@ API 라우트:
 `.env.example`에는 실제 값 없이 아래 이름만 준비했습니다.
 
 - `AI_PROVIDER`
-- `AI_API_KEY`
-- `AI_TEXT_MODEL`
-- `AI_IMAGE_MODEL`
-- `AI_REQUEST_TIMEOUT_MS`
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL`
+- `AI_TIMEOUT_MS`
+- `AI_MAX_OUTPUT_TOKENS`
 
 실제 API 키는 서버 환경변수에만 저장해야 하며 클라이언트 코드, localStorage, 브라우저 번들에 넣지 않습니다.
 

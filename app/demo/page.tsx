@@ -63,7 +63,7 @@ export default function DemoPage() {
     const current = steps[step];
     if (current.id === "create" || current.id === "video" || current.id === "webm") {
       prefillDemoCreate();
-      flash("데모 입력값과 샘플 결과를 준비했어요. 이 흐름은 실제 사용자 크레딧을 차감하지 않는 샘플 prefill입니다.");
+      flash("데모 입력값과 샘플 결과를 불러왔어요. 이 흐름은 실제 사용자 크레딧을 차감하지 않는 샘플 prefill입니다.");
     }
     if (current.id === "results") {
       prefillDemoCreate();

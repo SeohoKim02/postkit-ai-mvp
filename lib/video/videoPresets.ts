@@ -64,11 +64,12 @@ export function getVideoPresetByPlatform(platform: VideoPlatform) {
 }
 
 export function mapVideoPlatformToPostKitPlatform(platform: VideoPlatform): Platform {
-  if (platform === "Instagram Reels") return "Reels Thumbnail";
+  if (platform === "Instagram Reels") return "Instagram Reels";
   return platform;
 }
 
 export function recommendVideoPlatform(platform: Platform | undefined): VideoPlatform {
+  if (platform === "Instagram Reels" || platform === "Reels Thumbnail") return "Instagram Reels";
   if (platform === "Instagram Story") return "Instagram Story";
   if (platform === "TikTok") return "TikTok";
   if (platform === "YouTube Shorts") return "YouTube Shorts";

@@ -42,6 +42,7 @@ import { openPlatformUrl, shareUploadPackage } from "@/lib/shareUtils";
 import { drawVideoFrameToCanvas, renderVideoFrameToBlob, renderVideoToWebM } from "@/lib/video/videoRenderer";
 import { getVideoPresetByPlatform, videoDurationOptions, videoPresets } from "@/lib/video/videoPresets";
 import { getVideoTemplate, videoTemplates } from "@/lib/video/videoTemplates";
+import { getPostKitWatermarkStatus } from "@/lib/watermarkPolicy";
 import {
   createDefaultVideoProject,
   getLatestVideoProjectForContent,
@@ -120,6 +121,7 @@ export default function VideoStudioPage() {
   const [previewPlaying, setPreviewPlaying] = useState(false);
   const [previewTime, setPreviewTime] = useState(0);
   const [previewRefreshKey, setPreviewRefreshKey] = useState(0);
+  const watermarkStatus = useMemo(() => getPostKitWatermarkStatus(), []);
   const [support, setSupport] = useState(() => ({
     canvas: false,
     captureStream: false,
@@ -734,7 +736,7 @@ export default function VideoStudioPage() {
         </div>
       ) : null}
 
-      <div className="mt-5 grid gap-3 rounded-lg border border-coral/20 bg-blush p-4 lg:grid-cols-3">
+      <div className="mt-5 grid gap-3 rounded-lg border border-coral/20 bg-blush p-4 lg:grid-cols-4">
         <div>
           <p className="text-sm font-black text-coral">크레딧 정책</p>
           <p className="mt-1 text-sm leading-6 text-muted">이미 생성한 콘텐츠로 영상 템플릿을 만드는 작업에는 크레딧이 추가로 사용되지 않아요.</p>
@@ -746,6 +748,10 @@ export default function VideoStudioPage() {
         <div>
           <p className="text-sm font-black text-coral">브라우저 지원</p>
           <p className="mt-1 text-sm leading-6 text-muted">{support.message}</p>
+        </div>
+        <div>
+          <p className="text-sm font-black text-coral">워터마크</p>
+          <p className="mt-1 text-sm leading-6 text-muted">{watermarkStatus.message}</p>
         </div>
       </div>
 
@@ -981,6 +987,7 @@ export default function VideoStudioPage() {
                   Export
                 </Button>
               </div>
+              <p className="mt-3 rounded-lg bg-wash px-3 py-2 text-xs font-bold leading-5 text-muted">{watermarkStatus.message}</p>
             </Card>
           ) : null}
 
@@ -997,6 +1004,7 @@ export default function VideoStudioPage() {
                 문구 TXT
               </Button>
             </div>
+            <p className="mt-3 rounded-lg bg-wash px-3 py-2 text-xs font-bold leading-5 text-muted">{watermarkStatus.message}</p>
           </Card>
 
           <Card>

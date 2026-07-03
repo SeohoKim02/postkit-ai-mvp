@@ -87,7 +87,7 @@ type ScheduleFormState = {
   repeatCount: number;
 };
 
-const platforms: Platform[] = ["Instagram Feed", "Instagram Story", "Reels Thumbnail", "TikTok", "YouTube Shorts"];
+const platforms: Platform[] = ["Instagram Feed", "Instagram Story", "Instagram Reels", "TikTok", "YouTube Shorts", "Facebook", "X"];
 const purposes: Purpose[] = ["Personal Post", "Sponsored Post", "Product Promotion", "New Arrival", "Discount Event", "Review Post"];
 
 function scheduleToForm(schedule: ContentSchedule): ScheduleFormState {

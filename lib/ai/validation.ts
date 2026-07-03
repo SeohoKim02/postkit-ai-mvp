@@ -1,4 +1,4 @@
-import { platforms, purposes, styles } from "@/lib/constants";
+import { purposes, styles, supportedPlatforms } from "@/lib/constants";
 import { AI_ERROR_MESSAGES, AI_TASK_TYPES, type AiStructuredResult } from "@/lib/ai/types";
 import type { AiErrorCode, AiTaskType, CreateFormInput } from "@/types";
 
@@ -16,6 +16,15 @@ const sponsorDisclosureValues: CreateFormInput["sponsorDisclosure"][] = ["none",
 
 function trimText(value: string | undefined, max: number) {
   return (value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
+}
+
+function trimMultilineText(value: string | undefined, max: number) {
+  return (value ?? "")
+    .replace(/\r\n/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .slice(0, max);
 }
 
 function validId(value: string | undefined) {
@@ -100,7 +109,7 @@ export function validateCreateInputForAi(input: unknown): ValidationResult<Creat
   }
 
   const raw = input as Partial<CreateFormInput>;
-  if (!platforms.includes(raw.platform as CreateFormInput["platform"])) {
+  if (!supportedPlatforms.includes(raw.platform as CreateFormInput["platform"])) {
     return { ok: false, errorCode: "INVALID_INPUT", userMessage: "플랫폼을 다시 선택해 주세요.", warnings };
   }
 
@@ -171,23 +180,26 @@ export function validateCreateInputForAi(input: unknown): ValidationResult<Creat
   };
 }
 
-function normalizeArray(value: unknown, fallback: string[], maxItems: number) {
+function normalizeArray(value: unknown, fallback: string[], maxItems: number, maxLength = 220, preserveLineBreaks = false) {
   const source = Array.isArray(value) ? value : fallback;
-  return source.map((item) => trimText(String(item), 220)).filter(Boolean).slice(0, maxItems);
+  return source
+    .map((item) => (preserveLineBreaks ? trimMultilineText(String(item), maxLength) : trimText(String(item), maxLength)))
+    .filter(Boolean)
+    .slice(0, maxItems);
 }
 
 export function normalizeAiStructuredResult(value: Partial<AiStructuredResult>, fallback: AiStructuredResult): AiStructuredResult {
   return {
-    captions: normalizeArray(value.captions, fallback.captions, 5),
-    hashtags: normalizeArray(value.hashtags, fallback.hashtags, 20),
-    ctas: normalizeArray(value.ctas, fallback.ctas, 5),
-    hooks: normalizeArray(value.hooks, fallback.hooks, 5),
-    thumbnailTexts: normalizeArray(value.thumbnailTexts, fallback.thumbnailTexts, 5),
+    captions: normalizeArray(value.captions, fallback.captions, 5, 420, true),
+    hashtags: normalizeArray(value.hashtags, fallback.hashtags, 20, 80),
+    ctas: normalizeArray(value.ctas, fallback.ctas, 5, 120),
+    hooks: normalizeArray(value.hooks, fallback.hooks, 5, 120),
+    thumbnailTexts: normalizeArray(value.thumbnailTexts, fallback.thumbnailTexts, 5, 80),
     disclosureText: trimText(value.disclosureText, 220) || fallback.disclosureText,
     summary: trimText(value.summary, 240) || fallback.summary,
     recommendedTemplateId: trimText(value.recommendedTemplateId, 80) || fallback.recommendedTemplateId,
     personalizationExplanation: trimText(value.personalizationExplanation, 240) || fallback.personalizationExplanation,
-    warnings: normalizeArray(value.warnings, fallback.warnings, 8),
+    warnings: normalizeArray(value.warnings, fallback.warnings, 8, 220),
     modelMetadata: value.modelMetadata ?? fallback.modelMetadata
   };
 }

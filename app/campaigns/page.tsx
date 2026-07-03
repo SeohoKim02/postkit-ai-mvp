@@ -36,7 +36,7 @@ import { getHistory, saveCurrentResult, savePrefill } from "@/lib/storage";
 import { isVideoPreferredPlatform } from "@/lib/video/videoPresets";
 import type { Campaign, CampaignStatus, CampaignType, DeliverableType, HistoryItem, Platform } from "@/types";
 
-const platforms: Platform[] = ["Instagram Feed", "Instagram Story", "Reels Thumbnail", "TikTok", "YouTube Shorts"];
+const platforms: Platform[] = ["Instagram Feed", "Instagram Story", "Instagram Reels", "TikTok", "YouTube Shorts", "Facebook", "X"];
 
 function statusTone(status: CampaignStatus) {
   if (status === "완료") return "mint";

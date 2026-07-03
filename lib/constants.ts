@@ -3,10 +3,16 @@ import type { Platform, Purpose, StyleTone } from "@/types";
 export const platforms: Platform[] = [
   "Instagram Feed",
   "Instagram Story",
-  "Reels Thumbnail",
+  "Instagram Reels",
   "TikTok",
-  "YouTube Shorts"
+  "YouTube Shorts",
+  "Facebook",
+  "X"
 ];
+
+export const legacyPlatforms: Platform[] = ["Reels Thumbnail"];
+
+export const supportedPlatforms: Platform[] = [...platforms, ...legacyPlatforms];
 
 export const purposes: Purpose[] = [
   "Personal Post",

@@ -48,6 +48,7 @@ import {
   saveCurrentResult,
   updateHistoryResult
 } from "@/lib/storage";
+import { getPostKitWatermarkStatus } from "@/lib/watermarkPolicy";
 import type {
   CanvasImageSettings,
   CanvasTextElement,
@@ -119,6 +120,7 @@ export default function StudioPage() {
   const [error, setError] = useState("");
   const [isRendering, setIsRendering] = useState(false);
   const [isWorking, setIsWorking] = useState(false);
+  const watermarkStatus = useMemo(() => getPostKitWatermarkStatus(), []);
 
   useEffect(() => {
     const current = getCurrentResult();
@@ -710,6 +712,7 @@ export default function StudioPage() {
                 내보내기
               </Button>
             </div>
+            <p className="mt-3 rounded-lg bg-wash px-3 py-2 text-xs font-bold leading-5 text-muted">{watermarkStatus.message}</p>
           </Card>
 
           <Card>

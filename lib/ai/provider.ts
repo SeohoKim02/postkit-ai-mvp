@@ -8,7 +8,7 @@ function withRetryMetadata(result: AiProviderResult, retryCount: number): AiProv
     };
   }
 
-  const retryWarning = retryCount > 0 ? ["생성 공급자 오류 후 1회 안전 재시도로 결과를 만들었어요."] : [];
+  const retryWarning = retryCount > 0 ? ["문구 안정화를 위해 결과를 한 번 더 확인했습니다."] : [];
   const warnings = Array.from(new Set([...result.structuredResult.warnings, ...retryWarning]));
   const modelMetadata = {
     ...result.structuredResult.modelMetadata,

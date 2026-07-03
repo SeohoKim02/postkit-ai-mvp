@@ -1,9 +1,12 @@
 export type Platform =
   | "Instagram Feed"
   | "Instagram Story"
+  | "Instagram Reels"
   | "Reels Thumbnail"
   | "TikTok"
-  | "YouTube Shorts";
+  | "YouTube Shorts"
+  | "Facebook"
+  | "X";
 
 export type Purpose =
   | "Personal Post"
@@ -320,6 +323,12 @@ export type AiErrorCode =
   | "OUTPUT_VALIDATION_FAILED"
   | "PRIVACY_RESTRICTION"
   | "UNSUPPORTED_TASK"
+  | "MISSING_CONFIGURATION"
+  | "TIMEOUT"
+  | "RATE_LIMIT"
+  | "AUTHENTICATION_ERROR"
+  | "INVALID_RESPONSE"
+  | "VALIDATION_FAILED"
   | "UNKNOWN_ERROR";
 
 export type AiModelMetadata = {

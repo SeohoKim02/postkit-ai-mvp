@@ -82,7 +82,7 @@ function makeText(result: GeneratedPackage, brand: BrandProfile): CanvasTextElem
     cta: result.ctas[0] ?? "저장하고 다시 보기",
     brandName: result.brandName ?? result.input.brandName ?? brand.accountName,
     disclosure: result.disclosure,
-    footer: result.input.discountCode ? `할인코드 ${result.input.discountCode}` : "Made with PostKit"
+    footer: result.input.discountCode ? `할인코드 ${result.input.discountCode}` : result.input.brandName || result.brandName || brand.accountName
   };
 }
 
@@ -99,9 +99,11 @@ function defaultImageSettings(): CanvasImageSettings {
 
 function defaultOutputForResult(result: GeneratedPackage) {
   if (result.platform === "Instagram Story") return "instagram-story";
-  if (result.platform === "Reels Thumbnail") return "instagram-reels-thumbnail";
+  if (result.platform === "Instagram Reels" || result.platform === "Reels Thumbnail") return "instagram-reels-thumbnail";
   if (result.platform === "TikTok") return "tiktok";
   if (result.platform === "YouTube Shorts") return "youtube-shorts";
+  if (result.platform === "Facebook") return "facebook-square";
+  if (result.platform === "X") return "x-horizontal";
   return "instagram-feed-vertical";
 }
 
@@ -130,7 +132,7 @@ function normalizeProject(value: unknown): DesignProject | null {
       cta: typeof raw.editedText?.cta === "string" ? raw.editedText.cta : "",
       brandName: typeof raw.editedText?.brandName === "string" ? raw.editedText.brandName : "",
       disclosure: typeof raw.editedText?.disclosure === "string" ? raw.editedText.disclosure : "",
-      footer: typeof raw.editedText?.footer === "string" ? raw.editedText.footer : "Made with PostKit"
+      footer: typeof raw.editedText?.footer === "string" ? raw.editedText.footer : "브랜드 콘텐츠"
     },
     imageSettings: {
       ...defaultImageSettings(),

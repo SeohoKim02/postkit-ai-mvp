@@ -118,9 +118,12 @@ export function getRecommendedPreset(platform: Platform) {
   const map: Record<Platform, string> = {
     "Instagram Feed": "instagram-feed",
     "Instagram Story": "instagram-story",
+    "Instagram Reels": "instagram-reels",
     "Reels Thumbnail": "instagram-reels",
     TikTok: "tiktok",
-    "YouTube Shorts": "youtube-shorts"
+    "YouTube Shorts": "youtube-shorts",
+    Facebook: "facebook",
+    X: "x"
   };
 
   return getExportPresetById(map[platform]);
@@ -130,9 +133,11 @@ export function mapExportPlatformToPostKitPlatform(platform: ExportPlatform): Pl
   const map: Partial<Record<ExportPlatform, Platform>> = {
     "Instagram Feed": "Instagram Feed",
     "Instagram Story": "Instagram Story",
-    "Instagram Reels": "Reels Thumbnail",
+    "Instagram Reels": "Instagram Reels",
     TikTok: "TikTok",
-    "YouTube Shorts": "YouTube Shorts"
+    "YouTube Shorts": "YouTube Shorts",
+    Facebook: "Facebook",
+    X: "X"
   };
 
   return map[platform];

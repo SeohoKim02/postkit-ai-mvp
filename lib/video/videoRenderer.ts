@@ -2,6 +2,7 @@
 
 import { clamp, loadImageFromUrl, readableColor } from "@/lib/imageUtils";
 import { buildVideoFramePlan, getSupportedWebMMimeType } from "@/lib/video/videoUtils";
+import { drawPostKitWatermark } from "@/lib/watermarkPolicy";
 import type { VideoRenderResult, VideoRenderSettings, VideoTransitionType } from "@/types";
 
 function safeHex(value: string, fallback: string) {
@@ -361,6 +362,10 @@ export async function drawVideoFrameToCanvas(
   await drawImages(context, renderSettings, imageUrls, clamp(timeSeconds, 0, renderSettings.durationSeconds));
   applyOverlay(context, renderSettings);
   drawText(context, renderSettings);
+  drawPostKitWatermark(context, renderSettings.width, renderSettings.height, {
+    bottomSafeRatio: renderSettings.height > renderSettings.width ? 0.13 : 0.075,
+    rightSafeRatio: renderSettings.height > renderSettings.width ? 0.09 : 0.055
+  });
 }
 
 export async function renderVideoFrameToBlob(settings: VideoRenderSettings, imageUrls: string[], timeSeconds: number) {
