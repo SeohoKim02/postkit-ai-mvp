@@ -4,6 +4,7 @@ out
 dist
 build
 coverage
+qa-artifacts/
 .env
 .env.local
 .env.development.local

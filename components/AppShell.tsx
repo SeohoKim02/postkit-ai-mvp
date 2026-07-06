@@ -71,6 +71,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     initializeAccountStorage();
@@ -78,6 +79,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     cleanupExpiredMockUploads();
     const notifications = syncNotifications(getContentSchedules(), getCampaigns());
     setUnreadNotifications(notifications.filter((notification) => !notification.read).length);
+    setMounted(true);
   }, []);
 
   const moreActive = moreItems.some((item) => pathname === item.href);
@@ -197,7 +199,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main className="min-w-0 pb-40 lg:ml-64 lg:pb-0">
         <div className="mx-auto min-w-0 max-w-7xl overflow-x-hidden px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">{children}</div>
       </main>
-      <OnboardingModal />
+      {mounted ? <OnboardingModal /> : null}
     </div>
   );
 }

@@ -97,7 +97,18 @@ const forbiddenOutputPatterns = [
   /친구에게 말하듯/g,
   /자연스럽게/g,
   /업로드 패키지/g,
-  /콘텐츠 패키지/g
+  /콘텐츠 패키지/g,
+  /기준을\s*(보는|같이|먼저|확인|비교)/g,
+  /기준도\s*놓치지/g,
+  /쓰임이\s*분명한\s*쪽/g,
+  /실제로\s*쓰는\s*장면/g,
+  /필요한\s*옵션/g,
+  /게시물에서\s*먼저\s*확인/g,
+  /바로\s*쓰\s*기\s*좋/g,
+  /선물용이나/g,
+  /링크\s*열어두었어요/g,
+  /스토리에서\s*바로\s*저장/g,
+  /오늘\s*확인\s*가능합니다/g
 ];
 
 const overblownPatterns = [
@@ -285,16 +296,16 @@ function makeFeaturePhrase(keywords: string[], fallback: string) {
 
 function makeUseScene(source: string, category: string) {
   if (/캐비어|식탁|와인|파스타|크래커|안주|선물/.test(source)) {
-    return "식탁에 특별한 메뉴를 올리고 싶을 때";
+    return "특별한 날의 식탁";
   }
   if (/셔츠|린넨|운동화|신발|데님|슬랙스|룩|코디|원피스|니트/.test(source)) {
-    return "출근룩이나 주말 코디를 고를 때";
+    return "출근룩이나 주말 코디";
   }
   if (/카페|딸기라떼|라떼|커피|디저트|메뉴|음료/.test(source)) {
     return "달달한 메뉴가 생각나는 날";
   }
   if (/거치대|스마트폰|휴대폰|침대|책상|영상|각도/.test(source)) {
-    return "침대나 책상에서 영상을 볼 때";
+    return "침대나 책상에서 영상 볼 때";
   }
   if (/세일|할인|특가|이벤트|쿠폰/.test(source)) {
     return "사이즈나 옵션이 남아 있을 때";
@@ -350,10 +361,10 @@ function productUseDetail(context: CopyContext) {
   }
 
   if (context.keywords.length >= 2) {
-    return `${context.primaryKeyword}, ${context.secondaryKeyword} 기준을 같이 볼 수 있어 구매 전 비교하기 좋습니다.`;
+    return `${context.primaryKeyword}, ${context.secondaryKeyword} 부분을 함께 살펴보고 고르기 좋습니다.`;
   }
 
-  return `${context.useScene}, ${context.primaryKeyword} 기준을 확인하기 좋습니다.`;
+  return `${context.useScene}에 ${context.primaryKeyword}를 먼저 살펴보기 좋습니다.`;
 }
 
 function purchaseCta(context: CopyContext) {
@@ -367,24 +378,7 @@ function purchaseCta(context: CopyContext) {
     return "매장 방문 전 메뉴와 판매 시간을 확인해 주세요.";
   }
 
-  return "구매 전 옵션과 가격을 한 번 확인해 보세요.";
-}
-
-function detailSentence(context: CopyContext) {
-  if (context.keywords.length >= 2) {
-    return productUseDetail(context);
-  }
-
-  if (context.keywords.length === 1) {
-    return `${context.useScene}, ${context.primaryKeyword} 기준이 먼저 눈에 들어옵니다.`;
-  }
-
-  return `${context.useScene}, 부담 없이 꺼내 쓰기 좋습니다.`;
-}
-
-function comparisonCta(context: CopyContext) {
-  const target = context.keywords[2] ?? context.category;
-  return `비슷한 ${target} 찾고 있었다면 저장해두고 나중에 비교해도 좋아요.`;
+  return "구성과 보관 방법을 확인한 뒤 필요한 수량으로 선택해 주세요.";
 }
 
 function productQuestion(context: CopyContext) {
@@ -399,35 +393,35 @@ function buildFeedCopy(context: CopyContext): PlatformCopyBundle {
   return {
     captions: [
       withOptionalLine([
-        `${label}, 특별한 날에 꺼내기 좋은 제품입니다.`,
-        productUseDetail(context),
-        `선물용이나 ${context.primaryKeyword} 기준으로 고르는 분이라면 한 번 살펴보세요.`
+        `${label}, ${context.useScene}에 잘 어울립니다.`,
+        `${context.primaryKeyword}을 찾는 분이라면 ${productUseDetail(context)}`,
+        "복잡하게 준비하지 않아도 첫인상이 또렷하게 남습니다."
       ]),
       withOptionalLine([
-        `${context.audiencePhrase}이라면 ${label}도 비교해볼 만합니다.`,
-        `${context.secondaryKeyword}까지 같이 볼 수 있어 실제로 쓰는 장면이 더 분명합니다.`,
+        `${label}, ${context.useScene}에 조금 더해보세요.`,
+        `${context.secondaryKeyword}를 살리기 좋아서 사진보다 실제 자리에서 더 잘 어울립니다.`,
+        "함께 둘 메뉴나 소품을 고르면 준비가 한결 쉬워집니다."
+      ]),
+      withOptionalLine([
+        `${label}, ${context.audiencePhrase}에게 소개하기 좋습니다.`,
+        `${context.primaryKeyword}을 고민하고 있다면 너무 과하지 않으면서도 기억에 남는 쪽입니다.`,
+        "기념일이나 작은 모임을 준비할 때 후보로 남겨두세요."
+      ]),
+      withOptionalLine([
+        `${label}, 처음 준비할 때 어렵게 느껴질 수 있지만 생각보다 간단했습니다.`,
+        `${context.secondaryKeyword}와 함께 두면 준비한 자리가 훨씬 선명해집니다.`,
+        `${context.primaryKeyword}이 필요했던 날이라면 다시 찾게 될 만합니다.`
+      ]),
+      withOptionalLine([
+        `${label} 관련 정보가 궁금하다면 구성과 보관 방법을 먼저 확인해 주세요.`,
+        `${context.primaryKeyword} 구성인지, ${context.secondaryKeyword}로 어울리는지 살펴보고 선택하면 됩니다.`,
         purchaseCta(context)
-      ]),
-      withOptionalLine([
-        `${context.useScene}, ${label} 하나로 준비가 덜 복잡해졌어요.`,
-        `${context.featurePhrase} 기준을 보는 분이라면 사진보다 실제 사용 장면에서 더 이해하기 쉽습니다.`,
-        "비슷한 제품과 비교 중이라면 이 글을 저장해두세요."
-      ]),
-      withOptionalLine([
-        `${label}, 선물용으로도 무겁지 않게 준비할 수 있습니다.`,
-        `${context.primaryKeyword}만 보지 않고 ${context.secondaryKeyword}까지 챙긴 쪽이라 받는 사람도 바로 쓰기 좋습니다.`,
-        "구매 전 궁금한 부분은 문의하거나 댓글로 남겨주세요."
-      ]),
-      withOptionalLine([
-        `${label}, 화려하게 말하지 않아도 쓰임이 분명한 쪽입니다.`,
-        `${context.useScene}에 어울리고 ${context.featurePhrase} 기준도 놓치지 않습니다.`,
-        "필요한 옵션이 있다면 게시물에서 먼저 확인해 주세요."
       ])
     ],
     ctas: [
       `${label} 비교 중이라면 이 글을 저장해두세요.`,
       `${context.primaryKeyword} 관련해서 궁금한 점을 댓글로 남겨주세요.`,
-      `${context.secondaryKeyword}까지 보고 싶다면 옵션을 확인해 주세요.`
+      `${context.secondaryKeyword}도 중요하다면 구성 정보를 확인해 주세요.`
     ],
     hooks: [],
     thumbnails: []
@@ -439,15 +433,15 @@ function buildStoryCopy(context: CopyContext): PlatformCopyBundle {
 
   return {
     captions: [
-      withOptionalLine([`${label} 오늘 확인 가능합니다.`, `${context.primaryKeyword} 찾던 분들은 지금 보기.`]),
-      withOptionalLine([`${label} 링크 열어두었어요.`, `${context.secondaryKeyword}까지 같이 확인하세요.`]),
-      withOptionalLine([`${label} ${context.primaryKeyword} 궁금한 점은`, "DM으로 바로 남겨주세요."]),
+      withOptionalLine([`${label} 오늘 준비됐어요.`, `${context.primaryKeyword} 찾던 분께 맞아요.`]),
+      withOptionalLine([`${label} ${context.secondaryKeyword}`, "짧게 보고 결정해도 충분해요."]),
+      withOptionalLine([`${label} ${context.primaryKeyword} 궁금하면`, "DM으로 물어봐 주세요."]),
       withOptionalLine([`${label} ${context.secondaryKeyword} 마음에 드나요?`, "스티커로 골라주세요."]),
-      withOptionalLine([`${label} ${context.primaryKeyword} 다시 볼 분들은`, "스토리에서 바로 저장하세요."])
+      withOptionalLine([`${label} 놓치기 전에`, `${context.primaryKeyword} 먼저 확인해 주세요.`])
     ],
     ctas: [
       `${label} 궁금하면 스티커로 반응해 주세요.`,
-      `${context.primaryKeyword} 정보는 링크에서 확인해 보세요.`,
+      `${context.primaryKeyword} 정보가 필요하면 DM 주세요.`,
       `${label}에서 더 알고 싶은 점은 DM으로 남겨주세요.`
     ],
     hooks: [],
@@ -461,18 +455,18 @@ function buildReelsCopy(context: CopyContext): PlatformCopyBundle {
   return {
     captions: [
       withOptionalLine([
-        `${label} 실제로 쓰는 장면만 짧게 보여드려요.`,
-        `${context.primaryKeyword}, ${context.secondaryKeyword} 기준이 궁금했다면 영상에서 바로 확인할 수 있습니다.`,
+        `${label}, 영상으로 짧게 보여드립니다.`,
+        `${context.primaryKeyword}, ${context.secondaryKeyword} 포인트를 바로 확인할 수 있습니다.`,
         productQuestion(context)
       ]),
       withOptionalLine([
         `${label} 사진만으로 판단하기 어려웠다면 이 장면을 봐주세요.`,
-        `${context.useScene}, ${context.secondaryKeyword} 부분이 어떻게 보이는지 비교하기 쉽습니다.`,
+        `${context.useScene}에 맞는지, ${context.secondaryKeyword} 부분이 어떤지 확인하기 쉽습니다.`,
         "다시 보고 싶다면 저장해두세요."
       ]),
       withOptionalLine([
-        `${label}, ${context.useScene}에 맞는지 영상으로 담았습니다.`,
-        `${context.keywordSummary} 기준으로 고르는 분이라면 짧게 확인해 주세요.`,
+        `${label}, ${context.useScene}에 맞는지 짧은 영상으로 보여드립니다.`,
+        `${context.primaryKeyword}, ${context.secondaryKeyword} 부분을 중요하게 본다면 짧게 확인해 주세요.`,
         "다음 영상도 보고 싶다면 팔로우해 주세요."
       ])
     ],
@@ -485,7 +479,7 @@ function buildReelsCopy(context: CopyContext): PlatformCopyBundle {
       `${label} ${context.primaryKeyword}, 첫 장면에서 바로 보여드릴게요.`,
       `${label} 고를 때 ${context.primaryKeyword} 본다면 이 부분부터 보세요.`,
       `${label} ${context.secondaryKeyword} 장면은 사진보다 이해가 빠릅니다.`,
-      `${label} ${context.secondaryKeyword} 기준은 이 컷에서 보입니다.`,
+      `${label} ${context.secondaryKeyword} 부분은 이 컷에서 보입니다.`,
       `${label} ${context.primaryKeyword} 궁금한 점을 댓글로 남겨주세요.`
     ],
     thumbnails: [
@@ -504,19 +498,19 @@ function buildTikTokCopy(context: CopyContext): PlatformCopyBundle {
   return {
     captions: [
       withOptionalLine([
-        `${label} 써봤는데 ${context.primaryKeyword} 기준은 괜찮았어요.`,
+        `${label} 써봤는데 ${context.primaryKeyword} 쪽은 괜찮았어요.`,
         `${context.secondaryKeyword}까지 보는 분이면 영상으로 먼저 보세요.`,
         "여러분 취향인지 댓글로 알려주세요."
       ]),
       withOptionalLine([
         `${label} 찾고 있었다면 이 장면부터 보면 됩니다.`,
-        `${context.primaryKeyword} 기준으로 볼 때 실제 사용감이 더 잘 보입니다.`,
+        `${context.primaryKeyword}을 중요하게 볼 때 실제 사용감이 더 잘 보입니다.`,
         productUseDetail(context),
         "비슷한 취향이면 저장해두세요."
       ]),
       withOptionalLine([
         `${label}, ${context.useScene}에 바로 써봤습니다.`,
-        `${context.keywordSummary} 기준을 보는 분이면 댓글로 의견 남겨주세요.`,
+        `${context.keywordSummary}을 중요하게 보는 분이면 댓글로 의견 남겨주세요.`,
         "궁금한 점은 댓글로 남겨주세요."
       ])
     ],
@@ -529,7 +523,7 @@ function buildTikTokCopy(context: CopyContext): PlatformCopyBundle {
       `${label} ${context.primaryKeyword}, 직접 사용하면 이 부분이 먼저 보입니다.`,
       `${label} ${context.primaryKeyword} 중요하면 여기 보세요.`,
       `${label} ${context.secondaryKeyword} 찾는 중이면 이 장면만 봐도 됩니다.`,
-      `${label} ${context.secondaryKeyword} 기준은 여기서 갈립니다.`,
+      `${label} ${context.secondaryKeyword}는 여기서 차이가 보입니다.`,
       `${label} ${context.primaryKeyword}, 여러분 취향인지 댓글로 알려주세요.`
     ],
     thumbnails: []
@@ -543,15 +537,15 @@ function buildShortsCopy(context: CopyContext): PlatformCopyBundle {
     captions: [
       withOptionalLine([
         `${label} 짧게 사용해보고 남긴 영상입니다.`,
-        `${context.primaryKeyword}, ${context.secondaryKeyword} 기준으로 보는 분이라면 끝까지 확인해 주세요.`
+        `${context.primaryKeyword}, ${context.secondaryKeyword} 부분을 함께 보는 분이라면 끝까지 확인해 주세요.`
       ]),
       withOptionalLine([
         `${label} 고민 중인 분들을 위해 실제 장면만 모았습니다.`,
-        `${context.primaryKeyword} 기준으로 봐도 부담 없는지 확인할 수 있어요.`,
+        `${context.primaryKeyword}을 중요하게 봐도 부담 없는지 확인할 수 있어요.`,
         `${context.useScene} 어떤지 짧게 확인해 주세요.`
       ]),
       withOptionalLine([
-        `${label} 실제 사용 장면과 ${context.featurePhrase} 기준을 같이 볼 수 있어요.`,
+        `${label} 실제 장면에서 ${context.featurePhrase} 부분을 함께 볼 수 있어요.`,
         "궁금한 점은 고정댓글에 남겨주세요."
       ])
     ],
@@ -576,11 +570,11 @@ function buildXCopy(context: CopyContext): PlatformCopyBundle {
 
   return {
     captions: [
-      `${label}, ${context.primaryKeyword} 기준을 먼저 보는 분이라면 비교해볼 만합니다.`,
+      `${label}, ${context.primaryKeyword}을 먼저 보는 분이라면 비교해볼 만합니다.`,
       `${label} 찾는 중이면 ${context.secondaryKeyword}까지 같이 확인해 보세요.`,
-      `${label}, 짧게 말하면 ${context.primaryKeyword} 기준에 맞는 제품입니다.`,
-      `${label} 관련해서 ${context.keywordSummary} 기준이 궁금한 분께 맞습니다.`,
-      `${label} 옵션이 남아 있을 때 가격과 ${context.secondaryKeyword} 기준을 같이 보세요.`
+      `${label}, 짧게 말하면 ${context.primaryKeyword}을 중요하게 보는 분께 맞습니다.`,
+      `${label} 관련해서 ${context.keywordSummary}을 궁금해한 분께 맞습니다.`,
+      `${label} 구성과 ${context.secondaryKeyword}를 함께 확인해 보세요.`
     ],
     ctas: [
       `${label} 써본 분들은 댓글로 알려주세요.`,
@@ -599,11 +593,11 @@ function buildFacebookCopy(context: CopyContext): PlatformCopyBundle {
     captions: [
       withOptionalLine([
         `${label} 찾고 있었다면 이번에 비교해볼 만합니다.`,
-        `${context.useScene}, ${context.featurePhrase} 기준을 함께 볼 수 있어 필요한 분에게 잘 맞습니다.`,
+        `${context.useScene}, ${context.featurePhrase}을 함께 살펴볼 수 있어 필요한 분에게 잘 맞습니다.`,
         `${label} 필요한 분에게 공유해 주세요.`
       ]),
       withOptionalLine([
-        `${label} 고를 때는 ${context.primaryKeyword} 기준을 먼저 보게 됩니다.`,
+        `${label} 고를 때는 ${context.primaryKeyword}을 먼저 보게 됩니다.`,
         `${context.secondaryKeyword}까지 같이 확인할 수 있어서 구매 전 비교용으로 괜찮습니다.`,
         productQuestion(context)
       ]),
@@ -690,10 +684,6 @@ function buildHashtags(input: CreateFormInput, brand: BrandProfile, personalizat
     .filter((item) => item && item.length <= 18 && !/PostKit|Studio|AI|템플릿|Demo/i.test(item));
 
   return Array.from(new Set(hashtags)).slice(0, guide.hashtagLimit);
-}
-
-function makeCaptionTags(input: CreateFormInput, brand: BrandProfile, personalization?: PersonalizationProfile) {
-  return buildHashtags(input, brand, personalization).slice(0, 4).join(" ");
 }
 
 function disclosureText(input: CreateFormInput, brand: BrandProfile, personalization?: PersonalizationProfile) {
@@ -885,37 +875,37 @@ function strictFallbackItems(context: CopyContext, kind: GeneratedTextKind) {
     switch (context.platform) {
       case "Instagram Story":
         return [
-          `${label} 오늘 확인 가능합니다.\n${context.primaryKeyword} 찾던 분들은 지금 보기.`,
-          `${label} 링크 열어두었어요.\n${context.secondaryKeyword}까지 같이 확인하세요.`,
+          `${label} 오늘 준비됐어요.\n${context.primaryKeyword} 찾던 분께 맞아요.`,
+          `${label} ${context.secondaryKeyword}\n짧게 보고 결정해도 충분해요.`,
           `${label} ${context.primaryKeyword} 궁금하면 DM 주세요.`
         ];
       case "Instagram Reels":
         return [
-          `${label} 실제로 쓰는 장면만 짧게 보여드려요.\n${context.primaryKeyword}, ${context.secondaryKeyword} 기준을 영상에서 확인해 주세요.`,
-          `${context.useScene}, ${label} 어떤지 짧게 담았습니다.\n궁금한 점은 댓글로 남겨주세요.`,
-          `${label} ${context.primaryKeyword} 기준이 먼저 보입니다.\n다시 보려면 저장해두세요.`
+          `${label}, 영상으로 짧게 보여드립니다.\n${context.primaryKeyword}, ${context.secondaryKeyword} 포인트를 바로 확인해 주세요.`,
+          `${context.useScene}, ${label} 어떤지 짧게 보여드립니다.\n궁금한 점은 댓글로 남겨주세요.`,
+          `${label} ${context.primaryKeyword} 장면부터 보세요.\n다시 보려면 저장해두세요.`
         ];
       case "TikTok":
         return [
-          `${label} 써봤는데 ${context.primaryKeyword} 기준은 괜찮아요.\n${context.secondaryKeyword}까지 보는 분이면 영상으로 먼저 보세요.`,
+          `${label} 써봤는데 ${context.primaryKeyword} 쪽은 괜찮아요.\n${context.secondaryKeyword}까지 보는 분이면 영상으로 먼저 보세요.`,
           `${context.useScene}, ${label} ${context.primaryKeyword} 쪽이 꽤 편합니다.\n궁금하면 댓글로 남겨주세요.`,
-          `${label} ${context.secondaryKeyword} 찾던 분들이 볼 만한 장면만 담았습니다.\n취향인지 댓글로 알려주세요.`
+          `${label} ${context.secondaryKeyword} 찾던 분들이 볼 만한 장면만 골랐습니다.\n취향인지 댓글로 알려주세요.`
         ];
       case "YouTube Shorts":
         return [
-          `${label} 짧게 사용해보고 남긴 영상입니다.\n${context.featurePhrase} 기준을 보는 분이라면 끝까지 확인해 주세요.`,
+          `${label} 짧게 사용해보고 남긴 영상입니다.\n${context.featurePhrase}을 중요하게 본다면 끝까지 확인해 주세요.`,
           `${context.useScene}, ${label} ${context.primaryKeyword} 어떤지 짧게 보여드립니다.`,
           `${label} 실제 사용 장면을 보고 궁금한 점은 고정댓글에 남겨주세요.`
         ];
       case "Facebook":
         return [
-          `${label} 찾고 있었다면 이번에 비교해볼 만합니다.\n${context.useScene}, ${context.featurePhrase} 기준을 함께 볼 수 있어 필요한 분에게 잘 맞습니다.\n필요한 분에게 공유해 주세요.`,
-          `${label} 고를 때 ${context.primaryKeyword} 기준을 먼저 본다면 같이 비교해 보세요.\n궁금한 부분은 댓글로 남겨주세요.`,
+          `${label} 찾고 있었다면 이번에 비교해볼 만합니다.\n${context.useScene}, ${context.featurePhrase}을 함께 살펴볼 수 있어 필요한 분에게 잘 맞습니다.\n필요한 분에게 공유해 주세요.`,
+          `${label} 고를 때 ${context.primaryKeyword}을 먼저 본다면 같이 비교해 보세요.\n궁금한 부분은 댓글로 남겨주세요.`,
           `${label} 실제로 쓸 상황을 생각해보면 ${context.primaryKeyword}, ${context.benefit}이 필요한 분에게 맞는지 판단하기 쉽습니다.`
         ];
       case "X":
         return [
-          `${label}, ${context.primaryKeyword} 기준을 먼저 보는 분이라면 비교해볼 만합니다.`,
+          `${label}, ${context.primaryKeyword}을 먼저 보는 분이라면 비교해볼 만합니다.`,
           `${label} 찾는 중이면 ${context.secondaryKeyword}까지 같이 확인해 보세요.`,
           `${label}, ${context.secondaryKeyword}까지 챙긴 쪽입니다.`
         ];
@@ -923,11 +913,11 @@ function strictFallbackItems(context: CopyContext, kind: GeneratedTextKind) {
       case "Reels Thumbnail":
       default:
         return [
-          `${label}, 특별한 날에 꺼내기 좋은 제품입니다.\n${productUseDetail(context)}\n선물용이나 ${context.primaryKeyword} 기준으로 고르는 분이라면 한 번 살펴보세요.`,
-          `${context.audiencePhrase}이라면 ${label}도 비교해볼 만합니다.\n${context.secondaryKeyword}까지 같이 볼 수 있어 실제로 쓰는 장면이 더 분명합니다.\n${purchaseCta(context)}`,
-          `${context.useScene}, ${label} 하나로 준비가 덜 복잡해졌어요.\n${context.featurePhrase} 기준을 보는 분이라면 사진보다 실제 사용 장면에서 더 이해하기 쉽습니다.`,
-          `${label}, 선물용으로도 무겁지 않게 준비할 수 있습니다.\n${context.primaryKeyword}만 보지 않고 ${context.secondaryKeyword}까지 챙긴 쪽이라 받는 사람도 바로 쓰기 좋습니다.`,
-          `${label}, 화려하게 말하지 않아도 쓰임이 분명한 쪽입니다.\n${context.useScene}에 어울리고 ${context.featurePhrase} 기준도 놓치지 않습니다.`
+          `${label}, ${context.useScene}에 잘 어울립니다.\n${context.primaryKeyword}을 찾는 분이라면 ${productUseDetail(context)}`,
+          `${label}, ${context.useScene}에 조금 더해보세요.\n${context.secondaryKeyword}를 살리기 좋아서 사진보다 실제 자리에서 더 잘 어울립니다.`,
+          `${label}, ${context.audiencePhrase}에게 소개하기 좋습니다.\n${context.primaryKeyword}을 고민하고 있다면 너무 과하지 않으면서도 기억에 남는 쪽입니다.`,
+          `${label}, 처음 준비할 때 어렵게 느껴질 수 있지만 생각보다 간단했습니다.\n${context.secondaryKeyword}와 함께 두면 준비한 자리가 훨씬 선명해집니다.`,
+          `${label} 관련 정보가 궁금하다면 구성과 보관 방법을 먼저 확인해 주세요.\n${context.primaryKeyword} 구성인지, ${context.secondaryKeyword}로 어울리는지 살펴보고 선택하면 됩니다.`
         ];
     }
   }
@@ -935,9 +925,9 @@ function strictFallbackItems(context: CopyContext, kind: GeneratedTextKind) {
   if (kind === "hook") {
     return [
       `${label} ${context.primaryKeyword}, 첫 장면에서 바로 보여드릴게요.`,
-      `${label} ${context.primaryKeyword} 기준은 이 장면부터 보세요.`,
+      `${label} ${context.primaryKeyword}은 이 장면부터 보세요.`,
       `${context.useScene}, ${label} ${context.secondaryKeyword} 쪽이 꽤 편합니다.`,
-      `${label} ${context.secondaryKeyword}까지 보면 차이가 보입니다.`,
+      `${label} ${context.secondaryKeyword} 부분까지 보면 차이가 보입니다.`,
       `${label} ${context.primaryKeyword} 궁금하면 댓글로 의견 남겨주세요.`
     ];
   }

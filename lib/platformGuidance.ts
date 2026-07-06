@@ -49,9 +49,9 @@ const instagramReelsGuide: PlatformContentGuide = {
   ctaVariantLabels: ["댓글 유도", "팔로우 유도", "저장 유도"],
   hookVariantLabels: ["첫 장면 훅", "문제 제기 훅", "비교 훅", "저장 유도 훅", "댓글 유도 훅"],
   thumbnailVariantLabels: ["자막 1", "자막 2", "자막 3", "자막 4", "자막 5"],
-  ctaExamples: ["제품에서 궁금한 점을 댓글로 남겨주세요.", "비교 영상이 더 필요하면 팔로우해 주세요.", "다시 보려고 저장해두세요."],
-  hookExamples: ["실제 장면부터 보여드릴게요.", "고를 때 이 기준을 보면 편해요.", "영상으로 보면 비교하기 쉽습니다.", "다시 보려면 저장해두세요.", "여러분은 어떤 기준으로 고르나요?"],
-  thumbnailExamples: ["사용 장면 보기", "주요 기준 체크", "실사용 비교", "찾는 분께", "댓글 의견"]
+  ctaExamples: ["제품에서 궁금한 점을 댓글로 남겨주세요.", "비교 영상이 더 필요하면 팔로우해 주세요.", "다시 보려면 저장해두세요."],
+  hookExamples: ["첫 장면에서 바로 보여드릴게요.", "고르기 전 이 부분부터 보세요.", "영상으로 보면 비교하기 쉽습니다.", "다시 보려면 저장해두세요.", "여러분은 어떤 점이 더 중요해요?"],
+  thumbnailExamples: ["사용 장면 보기", "핵심 장면 체크", "실사용 비교", "찾는 분께", "댓글 의견"]
 };
 
 export const platformContentGuides: Record<Platform, PlatformContentGuide> = {
@@ -77,9 +77,9 @@ export const platformContentGuides: Record<Platform, PlatformContentGuide> = {
     ctaVariantLabels: ["저장 유도", "댓글 유도", "확인 유도"],
     hookVariantLabels: ["짧은 후킹", "저장 유도", "댓글 유도"],
     thumbnailVariantLabels: ["이미지 문구", "짧은 문구", "저장 문구"],
-    ctaExamples: ["비교할 때 다시 보려고 저장해두세요.", "궁금한 기준을 댓글로 남겨주세요.", "자세한 옵션은 프로필에서 확인해보세요."],
-    hookExamples: ["실제 사용 장면만 보여드려요.", "구매 전 비교하기 좋은 기준입니다.", "다시 보려고 저장해두세요."],
-    thumbnailExamples: ["오늘의 사용 후기", "비교 기준", "저장하고 다시 보기"]
+    ctaExamples: ["비교할 때 다시 보려고 저장해두세요.", "궁금한 점을 댓글로 남겨주세요.", "구성은 프로필에서 확인해보세요."],
+    hookExamples: ["실제 사용 장면만 보여드려요.", "구매 전 보기 좋은 장면입니다.", "다시 보려고 저장해두세요."],
+    thumbnailExamples: ["오늘의 사용 후기", "비교 장면", "저장하고 다시 보기"]
   },
   "Instagram Story": {
     label: "Instagram Story",
@@ -183,9 +183,9 @@ export const platformContentGuides: Record<Platform, PlatformContentGuide> = {
     ctaVariantLabels: ["공유 유도", "댓글 유도", "확인 유도"],
     hookVariantLabels: ["소개 문구", "공유 문구", "댓글 문구"],
     thumbnailVariantLabels: ["이미지 문구", "짧은 문구", "공유 문구"],
-    ctaExamples: ["필요한 분에게 공유해 주세요.", "궁금한 부분을 댓글로 남겨주세요.", "비교 기준을 다시 확인해보세요."],
-    hookExamples: ["써보고 남긴 비교 기준.", "공유해두면 좋은 사용 후기.", "댓글로 이야기 나누기 좋은 질문."],
-    thumbnailExamples: ["사용 후기", "공유할 정보", "비교 기준"]
+    ctaExamples: ["필요한 분에게 공유해 주세요.", "궁금한 부분을 댓글로 남겨주세요.", "비교할 내용을 다시 확인해보세요."],
+    hookExamples: ["써보고 남긴 비교 후기.", "공유해두면 좋은 사용 후기.", "댓글로 이야기 나누기 좋은 질문."],
+    thumbnailExamples: ["사용 후기", "공유할 정보", "비교 포인트"]
   },
   X: {
     label: "X",
