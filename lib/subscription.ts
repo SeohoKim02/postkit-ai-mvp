@@ -1,5 +1,5 @@
-import { creditPacks, subscriptionPlans } from "@/lib/plans";
-import type { CreditPack, SubscriptionPlan } from "@/types";
+import { subscriptionPlans } from "@/lib/plans";
+import type { SubscriptionPlan } from "@/types";
 
 export const CREDIT_ACCOUNT_VERSION = 1;
 export const CREDIT_LEDGER_VERSION = 1;
@@ -16,23 +16,7 @@ export const rolloverPolicy: Record<string, number> = {
 };
 
 export function getPlanByName(planName: string): SubscriptionPlan {
-  return subscriptionPlans.find((plan) => plan.name === planName) ?? subscriptionPlans[1] ?? subscriptionPlans[0];
-}
-
-export function getCreditPack(credits: number): CreditPack | undefined {
-  return creditPacks.find((pack) => pack.credits === credits);
-}
-
-export function getPlanRank(planName: string) {
-  return subscriptionPlans.findIndex((plan) => plan.name === planName);
-}
-
-export function isUpgrade(currentPlan: string, nextPlan: string) {
-  return getPlanRank(nextPlan) > getPlanRank(currentPlan);
-}
-
-export function isDowngrade(currentPlan: string, nextPlan: string) {
-  return getPlanRank(nextPlan) < getPlanRank(currentPlan);
+  return subscriptionPlans.find((plan) => plan.name === planName) ?? subscriptionPlans[0];
 }
 
 export function addMonths(value: string | Date, months: number) {

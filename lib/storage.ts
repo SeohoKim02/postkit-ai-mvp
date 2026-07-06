@@ -50,7 +50,11 @@ function writeJson<T>(key: string, value: T) {
     return;
   }
 
-  window.localStorage.setItem(key, JSON.stringify(value));
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // 저장 공간 부족 등으로 기록에 실패해도 앱 흐름은 중단하지 않는다.
+  }
 }
 
 function readArray<T>(key: string): T[] {

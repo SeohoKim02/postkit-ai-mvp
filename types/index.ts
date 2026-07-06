@@ -564,6 +564,8 @@ export type SubscriptionPlan = {
   description: string;
   recommendedFor: string;
   highlighted?: boolean;
+  /** "available"은 지금 사용 가능, "coming_soon"은 결제 연동 후 제공 예정 */
+  availability: "available" | "coming_soon";
 };
 
 export type CreditPack = {

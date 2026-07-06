@@ -102,6 +102,44 @@ export function hasActiveAiRequest(idempotencyKey: string) {
   });
 }
 
+/**
+ * 새로고침 등으로 완료 콜백이 실행되지 못한 채 남은 요청을 실패로 정리하고,
+ * 환불 대상 requestId 목록을 반환한다. 호출 측에서 크레딧 환불을 수행한다.
+ */
+export function reconcileStaleAiRequests() {
+  const now = Date.now();
+  const entries = getAiRequestHistory();
+  const staleRequestIds: string[] = [];
+  const completedAt = new Date().toISOString();
+
+  const next = entries.map((entry) => {
+    const isActive = entry.status === "pending" || entry.status === "running";
+    if (!isActive) {
+      return entry;
+    }
+
+    const startedAt = new Date(entry.startedAt).getTime();
+    const isStale = Number.isNaN(startedAt) || now - startedAt >= activeRequestWindowMs;
+    if (!isStale) {
+      return entry;
+    }
+
+    staleRequestIds.push(entry.requestId);
+    return {
+      ...entry,
+      status: "failed" as AiRequestStatus,
+      completedAt,
+      errorCode: "GENERATION_FAILED" as AiErrorCode
+    };
+  });
+
+  if (staleRequestIds.length > 0) {
+    saveAiRequestHistory(next);
+  }
+
+  return staleRequestIds;
+}
+
 export function startAiRequest(input: {
   requestId: string;
   idempotencyKey: string;

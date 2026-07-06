@@ -2,7 +2,7 @@
 
 import { getCreditAccount } from "@/lib/creditStorage";
 import { clamp } from "@/lib/imageUtils";
-import type { CreditAccount, SubscriptionStatus } from "@/types";
+import type { CreditAccount } from "@/types";
 
 export const POSTKIT_WATERMARK_TEXT = "Made with PostKit";
 
@@ -17,18 +17,24 @@ type WatermarkPlacement = {
   rightSafeRatio?: number;
 };
 
-function canRemoveWatermark(planName: string, subscriptionStatus: SubscriptionStatus) {
-  return subscriptionStatus === "active" && planName !== "Free";
+// 무료 공개 베타 정책: 서버 인증·결제로 유료 자격을 검증할 수 없으므로
+// 플랜과 무관하게 모든 결과물에 워터마크를 적용한다.
+// 서버 결제 연동 후 이 함수만 서버 검증 기반으로 바꾸면 제거 정책을 되살릴 수 있다.
+function canRemoveWatermark(account: Pick<CreditAccount, "currentPlan" | "subscriptionStatus">) {
+  void account;
+  return false;
 }
 
 export function getPostKitWatermarkStatus(account?: Pick<CreditAccount, "currentPlan" | "subscriptionStatus">): WatermarkStatus {
   const currentAccount = account ?? getCreditAccount({ applyMonthlyGrant: false });
-  const enabled = !canRemoveWatermark(currentAccount.currentPlan, currentAccount.subscriptionStatus);
+  const enabled = !canRemoveWatermark(currentAccount);
 
   return {
     enabled,
     text: POSTKIT_WATERMARK_TEXT,
-    message: enabled ? "무료 결과물에는 PostKit 워터마크가 표시됩니다." : "워터마크 없이 내보냅니다."
+    message: enabled
+      ? "무료 베타 기간에는 모든 결과물에 PostKit 워터마크가 표시됩니다."
+      : "워터마크 없이 내보냅니다."
   };
 }
 

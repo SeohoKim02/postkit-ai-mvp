@@ -3,8 +3,6 @@ import {
   createBillingDates,
   getPlanByName,
   getRolloverCap,
-  isDowngrade,
-  isUpgrade,
   MONTHLY_GRANT_SAFETY_LIMIT
 } from "@/lib/subscription";
 import type {
@@ -79,7 +77,7 @@ export function makeLedgerEntry(
   };
 }
 
-export function createInitialCreditAccount(planName = "Starter", existingCredits?: number) {
+export function createInitialCreditAccount(planName = "Free", existingCredits?: number) {
   const plan = getPlanByName(planName);
   const dates = createBillingDates();
   const startingCredits = safeCredits(existingCredits ?? plan.credits);
@@ -189,93 +187,6 @@ export function refundGenerationDebit(
         purchasedCreditsRefunded: purchasedCreditsUsed
       }
     })
-  };
-}
-
-export function purchaseCredits(account: CreditAccount, credits: number, price: string) {
-  const safeAmount = safeCredits(credits);
-  const current = normalizeCreditAccount(account);
-  const nextAccount = normalizeCreditAccount({
-    ...current,
-    purchasedCreditBalance: current.purchasedCreditBalance + safeAmount,
-    lifetimePurchasedCredits: current.lifetimePurchasedCredits + safeAmount,
-    lastUpdatedAt: nowIso()
-  });
-
-  return {
-    account: nextAccount,
-    ledgerEntry: makeLedgerEntry(nextAccount, "credit_purchase", safeAmount, `${safeAmount.toLocaleString()} 크레딧 mock 구매`, {
-      metadata: { price }
-    })
-  };
-}
-
-export function changePlan(account: CreditAccount, nextPlanName: string) {
-  const current = normalizeCreditAccount(account);
-  const currentPlan = getPlanByName(current.currentPlan);
-  const nextPlan = getPlanByName(nextPlanName);
-
-  if (currentPlan.name === nextPlan.name) {
-    return {
-      account: current,
-      ledgerEntry: undefined,
-      message: "현재 이용 중인 플랜입니다."
-    };
-  }
-
-  if (isUpgrade(currentPlan.name, nextPlan.name)) {
-    const grantDifference = Math.max(0, nextPlan.credits - currentPlan.credits);
-    const nextAccount = normalizeCreditAccount({
-      ...current,
-      currentPlan: nextPlan.name,
-      subscriptionStatus: nextPlan.name === "Free" ? "free" : "active",
-      subscriptionCreditBalance: current.subscriptionCreditBalance + grantDifference,
-      lifetimeGrantedCredits: current.lifetimeGrantedCredits + grantDifference,
-      scheduledPlanChange: undefined,
-      lastUpdatedAt: nowIso()
-    });
-
-    return {
-      account: nextAccount,
-      ledgerEntry: makeLedgerEntry(nextAccount, "plan_upgrade", grantDifference, `${nextPlan.name} 플랜으로 mock 업그레이드`, {
-        relatedPlan: nextPlan.name,
-        metadata: {
-          previousPlan: currentPlan.name,
-          grantDifference
-        }
-      }),
-      message: `${nextPlan.name} 플랜으로 변경하고 차액 ${grantDifference.toLocaleString()} 크레딧을 지급했어요.`
-    };
-  }
-
-  if (isDowngrade(currentPlan.name, nextPlan.name)) {
-    const nextAccount = normalizeCreditAccount({
-      ...current,
-      scheduledPlanChange: {
-        planName: nextPlan.name,
-        effectiveAt: current.nextCreditGrantAt,
-        requestedAt: nowIso()
-      },
-      lastUpdatedAt: nowIso()
-    });
-
-    return {
-      account: nextAccount,
-      ledgerEntry: makeLedgerEntry(nextAccount, "plan_downgrade", 0, `${nextPlan.name} 플랜으로 다음 결제일부터 mock 다운그레이드 예약`, {
-        relatedPlan: nextPlan.name,
-        metadata: {
-          previousPlan: currentPlan.name,
-          effectiveAt: current.nextCreditGrantAt
-        }
-      }),
-      message: `${nextPlan.name} 플랜 변경이 다음 지급일부터 적용되도록 예약됐어요.`
-    };
-  }
-
-  return {
-    account: current,
-    ledgerEntry: undefined,
-    message: "플랜 변경을 처리하지 못했어요."
   };
 }
 

@@ -2,17 +2,16 @@
 
 import {
   applyDueMonthlyGrant,
-  changePlan,
   createInitialCreditAccount,
   debitCredits,
   normalizeCreditAccount,
-  purchaseCredits,
   refundGenerationDebit,
   safeCredits,
   totalCredits
 } from "@/lib/creditLedger";
+import { FREE_BETA_PLAN_NAME } from "@/lib/plans";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
-import { CREDIT_ACCOUNT_VERSION, getCreditPack, getPlanByName } from "@/lib/subscription";
+import { CREDIT_ACCOUNT_VERSION, getPlanByName } from "@/lib/subscription";
 import type {
   CreditAccount,
   CreditDebitResult,
@@ -43,7 +42,11 @@ function writeJson<T>(key: string, value: T) {
     return;
   }
 
-  window.localStorage.setItem(key, JSON.stringify(value));
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // 저장 공간 부족 등으로 기록에 실패해도 앱 흐름은 중단하지 않는다.
+  }
 }
 
 function readArray<T>(key: string): T[] {
@@ -61,7 +64,9 @@ function migrateCreditAccount(raw: unknown): CreditAccount | null {
   }
 
   const value = raw as Partial<CreditAccount>;
-  const plan = getPlanByName(String(value.currentPlan || "Starter"));
+  // 무료 공개 베타에서는 결제가 없으므로 어떤 저장값이든 Free 베타 플랜으로 정규화한다.
+  // 유료 플랜은 서버 결제 검증이 연결된 뒤에만 복원한다.
+  const plan = getPlanByName(FREE_BETA_PLAN_NAME);
   const subscriptionCreditBalance = safeCredits(value.subscriptionCreditBalance);
   const purchasedCreditBalance = safeCredits(value.purchasedCreditBalance);
   const now = new Date().toISOString();
@@ -69,7 +74,7 @@ function migrateCreditAccount(raw: unknown): CreditAccount | null {
   return normalizeCreditAccount({
     version: CREDIT_ACCOUNT_VERSION,
     currentPlan: plan.name,
-    subscriptionStatus: value.subscriptionStatus ?? (plan.name === "Free" ? "free" : "active"),
+    subscriptionStatus: "free",
     billingCycleStartedAt: typeof value.billingCycleStartedAt === "string" ? value.billingCycleStartedAt : now,
     nextCreditGrantAt: typeof value.nextCreditGrantAt === "string" ? value.nextCreditGrantAt : now,
     subscriptionCreditBalance,
@@ -79,15 +84,13 @@ function migrateCreditAccount(raw: unknown): CreditAccount | null {
     lifetimePurchasedCredits: safeCredits(value.lifetimePurchasedCredits),
     lifetimeUsedCredits: safeCredits(value.lifetimeUsedCredits),
     lifetimeRefundedCredits: safeCredits(value.lifetimeRefundedCredits),
-    scheduledPlanChange: value.scheduledPlanChange,
     lastUpdatedAt: typeof value.lastUpdatedAt === "string" ? value.lastUpdatedAt : now
   });
 }
 
 function createMigratedAccount() {
   const legacy = readLegacyAccount();
-  const legacyPlan = typeof legacy?.planName === "string" ? legacy.planName : "Starter";
-  const plan = getPlanByName(legacyPlan);
+  const plan = getPlanByName(FREE_BETA_PLAN_NAME);
   const legacyCredits = typeof legacy?.credits === "number" ? safeCredits(legacy.credits) : plan.credits;
   return createInitialCreditAccount(plan.name, legacyCredits);
 }
@@ -181,6 +184,27 @@ export function spendCreditsForGeneration(amount: number, relatedContentId: stri
   return result;
 }
 
+/**
+ * 새로고침 등으로 완료 처리가 끊긴 생성 요청의 차감분을 환불한다.
+ * 성공적으로 끝난 요청(관련 환불이 이미 있거나 결과가 저장된 경우)은 refundGenerationCredits의
+ * 중복 환불 가드가 그대로 막아준다.
+ */
+export function refundGenerationCreditsByRequestId(requestId: string) {
+  const debitEntry = getCreditLedger().find(
+    (entry) => entry.type === "generation_debit" && entry.relatedContentId === requestId
+  );
+
+  if (!debitEntry) {
+    return {
+      account: getCreditAccount({ applyMonthlyGrant: false }),
+      ledgerEntry: undefined,
+      refunded: false
+    };
+  }
+
+  return refundGenerationCredits(debitEntry.id);
+}
+
 export function refundGenerationCredits(debitLedgerId: string) {
   const ledger = getCreditLedger();
   const debitEntry = ledger.find((entry) => entry.id === debitLedgerId && entry.type === "generation_debit");
@@ -202,33 +226,6 @@ export function refundGenerationCredits(debitLedgerId: string) {
     ...result,
     refunded: true
   };
-}
-
-export function mockPurchaseCredits(credits: number) {
-  const pack = getCreditPack(credits);
-  if (!pack) {
-    return {
-      account: getCreditAccount(),
-      ledgerEntry: undefined,
-      message: "크레딧 상품을 찾을 수 없습니다."
-    };
-  }
-
-  const result = purchaseCredits(getCreditAccount(), pack.credits, pack.price);
-  saveCreditAccount(result.account);
-  appendCreditLedger(result.ledgerEntry);
-
-  return {
-    ...result,
-    message: `${pack.credits.toLocaleString()} 크레딧 mock 구매가 완료됐어요. 실제 결제는 발생하지 않았습니다.`
-  };
-}
-
-export function mockChangePlan(planName: string) {
-  const result = changePlan(getCreditAccount(), planName);
-  saveCreditAccount(result.account);
-  appendCreditLedger(result.ledgerEntry);
-  return result;
 }
 
 export function getCreditStorageKeys() {
