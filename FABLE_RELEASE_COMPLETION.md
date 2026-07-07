@@ -1,5 +1,9 @@
 # PostKit 무료 공개 베타 완성 보고서 (FABLE_RELEASE_COMPLETION)
 
+> **[갱신 — 2026-07-07 최종 QA]** 아래 "미검증 항목"이던 PNG/WebM 실물·모바일 실측은
+> 임시 프로필 브라우저 자동화로 **전부 완료**됐고, 그 과정에서 발견된 7건(High 1 포함)이 추가 수정됐다.
+> 최종 결과·판정(출시 가능, 점수 82)은 [FABLE_FINAL_RELEASE_QA.md](./FABLE_FINAL_RELEASE_QA.md) 참고.
+
 `FABLE_RELEASE_AUDIT.md`(2026-07-07 독립 검수)가 지적한 무료 공개 베타 출시 조건을 수정한 결과 보고서다.
 작업 브랜치: `fable-release-audit` (main 병합 안 함). 선행 커밋 `d99ee01`(part 1)과 이번 커밋(part 2)을 합친 상태 기준이다.
 
