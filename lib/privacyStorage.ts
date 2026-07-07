@@ -240,18 +240,20 @@ function sanitizePackageUploadData(value: GeneratedPackage): GeneratedPackage {
   };
 }
 
-function sanitizeHistoryUploads() {
+// 정리 대상으로 판정된 콘텐츠만 업로드 참조를 제거한다.
+// 전체를 무차별 제거하면 방금 생성해 작업 중인 콘텐츠의 사진 연결까지 끊어진다.
+function sanitizeHistoryUploads(candidateIds: Set<string>) {
   const history = readArray<HistoryItem>(historyKey);
   const nextHistory = history
     .filter((item) => item && typeof item === "object")
     .map((item) => ({
       ...item,
-      package: item.package ? sanitizePackageUploadData(item.package) : item.package
+      package: item.package && candidateIds.has(item.id) ? sanitizePackageUploadData(item.package) : item.package
     }));
   writeJson(historyKey, nextHistory);
 
   const current = readJson<GeneratedPackage | null>(currentResultKey, null);
-  if (current && typeof current === "object" && "input" in current) {
+  if (current && typeof current === "object" && "input" in current && candidateIds.has(current.id)) {
     writeJson(currentResultKey, sanitizePackageUploadData(current));
   }
 }
@@ -288,17 +290,19 @@ export function getRetentionCleanupCandidates(): RetentionCleanupCandidate[] {
     .filter((item) => item && typeof item === "object")
     .filter((item) => Boolean(item.package?.input?.uploadedFileName))
     .filter((item) => {
-      if (settings.originalFileRetention === "none") {
+      const createdAt = parseDate(item.createdAt);
+      if (!createdAt) {
         return true;
+      }
+
+      if (settings.originalFileRetention === "none") {
+        // 즉시 지우면 방금 만든 콘텐츠의 Studio/Video 사진 연결이 끊어지므로
+        // "저장 안 함"도 작업 세션을 보호하는 24시간 유예 후 참조를 정리한다.
+        return now - createdAt.getTime() > 24 * 60 * 60 * 1000;
       }
 
       if (!days) {
         return false;
-      }
-
-      const createdAt = parseDate(item.createdAt);
-      if (!createdAt) {
-        return true;
       }
 
       return now - createdAt.getTime() > days * 24 * 60 * 60 * 1000;
@@ -319,7 +323,7 @@ export function cleanupExpiredMockUploads() {
     return { deletedCount: 0 };
   }
 
-  sanitizeHistoryUploads();
+  sanitizeHistoryUploads(new Set(candidates.map((candidate) => candidate.id)));
   const nextSettings = {
     ...getRetentionSettings(),
     lastCleanupAt: new Date().toISOString()
@@ -379,7 +383,7 @@ export function collectPostKitDataForExport() {
 
   return {
     exportedAt: new Date().toISOString(),
-    note: "PostKit mock localStorage export. 실제 운영에서는 서버 검증과 접근 제어가 필요합니다.",
+    note: "이 브라우저(localStorage)에 저장된 PostKit 데이터의 내보내기 파일입니다.",
     keys: values
   };
 }
@@ -399,7 +403,17 @@ export function deleteDataScope(scope: DeleteDataScope) {
 
   try {
     if (scope === "uploads") {
-      sanitizeHistoryUploads();
+      // 사용자가 명시적으로 요청한 삭제이므로 모든 콘텐츠의 업로드 참조를 정리한다.
+      const allIds = new Set(
+        readArray<HistoryItem>(historyKey)
+          .filter((item) => item && typeof item === "object" && typeof item.id === "string")
+          .map((item) => item.id)
+      );
+      const current = readJson<GeneratedPackage | null>(currentResultKey, null);
+      if (current && typeof current === "object" && typeof current.id === "string") {
+        allIds.add(current.id);
+      }
+      sanitizeHistoryUploads(allIds);
       addPrivacyAuditEvent("content_deleted");
       return { ok: true, message: "업로드 파일 참조를 정리했어요." };
     }

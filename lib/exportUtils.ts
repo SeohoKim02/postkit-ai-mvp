@@ -148,6 +148,12 @@ export function buildExportAssets(result: GeneratedPackage, preset: ExportPreset
   const imageContentType = getImageContentType(preset);
   const originalKind = result.input.uploadedFileName?.toLowerCase().match(/\.(mp4|mov|webm|avi)$/) ? "video" : "image";
 
+  // 내용이 없는 텍스트 자산은 0바이트 파일 다운로드 대신 비활성으로 표시한다.
+  const textAvailability = (text: string, emptyReason: string) =>
+    text.trim().length > 0
+      ? { available: true as const }
+      : { available: false as const, unavailableReason: emptyReason };
+
   return [
     {
       id: `${preset.id}-image`,
@@ -179,7 +185,7 @@ export function buildExportAssets(result: GeneratedPackage, preset: ExportPreset
       label: "생성된 캡션 TXT",
       fileName: makeExportFileName(result, preset, "captions_txt", "txt"),
       mimeType: "text/plain;charset=utf-8",
-      available: true,
+      ...textAvailability(result.captions.join("\n\n"), "이 결과에는 캡션 문구가 없어요."),
       source: "text",
       text: result.captions.join("\n\n")
     },
@@ -190,7 +196,7 @@ export function buildExportAssets(result: GeneratedPackage, preset: ExportPreset
       label: "해시태그 TXT",
       fileName: makeExportFileName(result, preset, "hashtags_txt", "txt"),
       mimeType: "text/plain;charset=utf-8",
-      available: true,
+      ...textAvailability(result.hashtags.join(" "), "이 결과에는 해시태그가 없어요."),
       source: "text",
       text: result.hashtags.join(" ")
     },
@@ -201,7 +207,7 @@ export function buildExportAssets(result: GeneratedPackage, preset: ExportPreset
       label: "CTA 문구 TXT",
       fileName: makeExportFileName(result, preset, "cta_txt", "txt"),
       mimeType: "text/plain;charset=utf-8",
-      available: true,
+      ...textAvailability(result.ctas.join("\n"), "이 결과에는 CTA 문구가 없어요."),
       source: "text",
       text: result.ctas.join("\n")
     },
@@ -212,7 +218,7 @@ export function buildExportAssets(result: GeneratedPackage, preset: ExportPreset
       label: "광고/협찬 표시 문구 TXT",
       fileName: makeExportFileName(result, preset, "disclosure_txt", "txt"),
       mimeType: "text/plain;charset=utf-8",
-      available: true,
+      ...textAvailability(result.disclosure, "이 결과에는 광고/협찬 표시 문구가 없어요."),
       source: "text",
       text: result.disclosure
     },
@@ -223,7 +229,7 @@ export function buildExportAssets(result: GeneratedPackage, preset: ExportPreset
       label: "썸네일 문구 TXT",
       fileName: makeExportFileName(result, preset, "thumbnail_txt", "txt"),
       mimeType: "text/plain;charset=utf-8",
-      available: true,
+      ...textAvailability(result.thumbnails.join("\n"), "이 플랫폼 결과에는 썸네일 문구가 없어요."),
       source: "text",
       text: result.thumbnails.join("\n")
     },
@@ -234,7 +240,7 @@ export function buildExportAssets(result: GeneratedPackage, preset: ExportPreset
       label: "전체 업로드 문구 TXT",
       fileName: makeExportFileName(result, preset, "full_upload_txt", "txt"),
       mimeType: "text/plain;charset=utf-8",
-      available: true,
+      ...textAvailability(composeFullUploadText(result), "이 결과에는 업로드 문구가 없어요."),
       source: "text",
       text: composeFullUploadText(result)
     },

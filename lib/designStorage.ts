@@ -75,13 +75,19 @@ function snapshotBrand(brand: BrandProfile, primaryColor = "#ff6b4a", secondaryC
   };
 }
 
+// "광고/협찬 표시 없음"은 상태 안내 문구라 이미지 산출물에 새기지 않는다.
+function displayDisclosure(value: string) {
+  const cleaned = (value ?? "").trim();
+  return cleaned && cleaned !== "광고/협찬 표시 없음" ? cleaned : "";
+}
+
 function makeText(result: GeneratedPackage, brand: BrandProfile): CanvasTextElement {
   return {
     title: result.thumbnails[0] ?? shortText(getSelectedCaption(result), result.input.productName || result.title),
     subtitle: shortText(result.hooks[0] ?? getSelectedCaption(result), result.input.productName || result.title),
     cta: result.ctas[0] ?? "저장하고 다시 보기",
     brandName: result.brandName ?? result.input.brandName ?? brand.accountName,
-    disclosure: result.disclosure,
+    disclosure: displayDisclosure(result.disclosure),
     footer: result.input.discountCode ? `할인코드 ${result.input.discountCode}` : result.input.brandName || result.brandName || brand.accountName
   };
 }
@@ -302,7 +308,8 @@ export function makeDesignFileName(project: DesignProject) {
     : `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
   const platform = sanitizeFilePart(project.platform);
   const id = project.id.replace(/[^a-z0-9]/gi, "").slice(-6) || "design";
-  return `postkit_${platform}_${stamp}_${id}.png`;
+  // 같은 플랫폼의 세로/정사각 등 출력 크기가 달라도 파일명이 겹치지 않도록 치수를 포함한다.
+  return `postkit_${platform}_${project.width}x${project.height}_${stamp}_${id}.png`;
 }
 
 export function getDesignStorageKeys() {

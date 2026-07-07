@@ -270,7 +270,11 @@ function drawText(context: CanvasRenderingContext2D, project: DesignProject, tem
   if (project.editedText.footer) {
     context.fillStyle = mutedColor;
     context.font = font(Math.max(16, smallSize * 0.74), 700);
+    const previousAlign = context.textAlign;
+    // 우하단 기준점에서 왼쪽으로 그려야 캔버스 밖으로 잘리지 않는다.
+    context.textAlign = "right";
     context.fillText(project.editedText.footer, project.width - box.padding, project.height - box.padding * 0.72);
+    context.textAlign = previousAlign;
   }
 }
 

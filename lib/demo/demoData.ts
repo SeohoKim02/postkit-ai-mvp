@@ -486,7 +486,7 @@ export function createDemoDataBundle(): DemoDataBundle {
   const creditLedger: Array<DemoRecord<CreditLedgerEntry>> = [
     demo({ id: "demo-ledger-1", type: "initial_grant", amount: 450, balanceAfter: 450, subscriptionBalanceAfter: 450, purchasedBalanceAfter: 0, description: "Creator Plus 데모 월 크레딧 지급", relatedPlan: "Creator Plus", createdAt }),
     demo({ id: "demo-ledger-2", type: "generation_debit", amount: -30, balanceAfter: 420, subscriptionBalanceAfter: 420, purchasedBalanceAfter: 0, description: "데모 업로드 패키지 생성", relatedContentId: "demo-content-1", createdAt: iso(-1, 9), metadata: { requestId: "demo-ai-request-1", subscriptionCreditsUsed: 30, purchasedCreditsUsed: 0 } }),
-    demo({ id: "demo-ledger-3", type: "credit_purchase", amount: 100, balanceAfter: 520, subscriptionBalanceAfter: 420, purchasedBalanceAfter: 100, description: "데모 추가 크레딧 mock 구매", createdAt: iso(-1, 10), metadata: { price: "8,900원" } })
+    demo({ id: "demo-ledger-3", type: "credit_purchase", amount: 100, balanceAfter: 520, subscriptionBalanceAfter: 420, purchasedBalanceAfter: 100, description: "데모 크레딧 지급 예시", createdAt: iso(-1, 10), metadata: { price: "8,900원" } })
   ];
   const privacyPreferences = demo({
     version: 1,

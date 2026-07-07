@@ -76,6 +76,13 @@ function shortText(value: string | undefined, fallback: string) {
   return cleaned.length > 58 ? `${cleaned.slice(0, 56).trim()}...` : cleaned;
 }
 
+// "광고/협찬 표시 없음"은 상태 안내 문구라 영상 산출물에 새기지 않는다.
+// brand.defaultDisclosure는 표시 방식 지침문이라 게시용 문구로 쓰지 않는다.
+function displayDisclosure(value: string) {
+  const cleaned = (value ?? "").trim();
+  return cleaned && cleaned !== "광고/협찬 표시 없음" ? cleaned : "";
+}
+
 function makeVideoText(result: GeneratedPackage, brand: BrandProfile): VideoTextSettings {
   return {
     title: shortText(result.thumbnails[0] ?? result.title, result.input.productName || result.title),
@@ -83,7 +90,7 @@ function makeVideoText(result: GeneratedPackage, brand: BrandProfile): VideoText
     productName: result.input.productName || result.title,
     cta: result.ctas[0] ?? "저장하고 다시 보기",
     brandName: result.brandName ?? result.input.brandName ?? brand.accountName,
-    disclosure: result.disclosure || brand.defaultDisclosure,
+    disclosure: displayDisclosure(result.disclosure),
     discountCode: result.input.discountCode ?? ""
   };
 }
