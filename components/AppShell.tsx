@@ -30,7 +30,18 @@ import { getCreditAccount } from "@/lib/creditStorage";
 import { syncNotifications } from "@/lib/notificationStorage";
 import { cleanupExpiredMockUploads } from "@/lib/privacyStorage";
 
-const desktopNavItems = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: typeof Home;
+  notice?: boolean;
+};
+
+const diagnosticsEnabled = process.env.NEXT_PUBLIC_ENABLE_DIAGNOSTICS === "true";
+
+const diagnosticsNavItem: NavItem = { href: "/diagnostics", label: "진단", icon: ListChecks };
+
+const desktopNavItems: NavItem[] = [
   { href: "/dashboard", label: "대시보드", icon: Home },
   { href: "/create", label: "만들기", icon: PlusCircle },
   { href: "/studio", label: "Studio", icon: Palette },
@@ -39,14 +50,14 @@ const desktopNavItems = [
   { href: "/campaigns", label: "캠페인", icon: Megaphone },
   { href: "/history", label: "히스토리", icon: History },
   { href: "/export", label: "내보내기", icon: Share2 },
-  { href: "/pricing", label: "크레딧", icon: CreditCard },
+  { href: "/pricing", label: "플랜", icon: CreditCard },
   { href: "/account", label: "계정", icon: UserRound },
-  { href: "/diagnostics", label: "진단", icon: ListChecks },
-  { href: "/settings", label: "브랜드", icon: Settings },
+  ...(diagnosticsEnabled ? [diagnosticsNavItem] : []),
+  { href: "/settings", label: "브랜드 설정", icon: Settings },
   { href: "/privacy", label: "개인정보", icon: ShieldCheck }
 ];
 
-const mobileNavItems = [
+const mobileNavItems: NavItem[] = [
   { href: "/dashboard", label: "홈", icon: Home },
   { href: "/create", label: "만들기", icon: PlusCircle },
   { href: "/results", label: "결과", icon: Sparkles },
@@ -54,17 +65,16 @@ const mobileNavItems = [
   { href: "/export", label: "내보내기", icon: Share2 }
 ];
 
-const moreItems = [
+const moreItems: NavItem[] = [
   { href: "/video-studio", label: "Video", icon: Video },
   { href: "/history", label: "히스토리", icon: History },
   { href: "/calendar", label: "캘린더", icon: CalendarDays, notice: true },
   { href: "/campaigns", label: "캠페인", icon: Megaphone },
-  { href: "/pricing", label: "크레딧", icon: CreditCard },
+  { href: "/pricing", label: "플랜", icon: CreditCard },
   { href: "/account", label: "계정", icon: UserRound },
-  { href: "/diagnostics", label: "진단", icon: ListChecks },
-  { href: "/settings", label: "브랜드", icon: Palette },
-  { href: "/privacy", label: "개인정보", icon: ShieldCheck },
-  { href: "/settings", label: "설정", icon: Settings }
+  ...(diagnosticsEnabled ? [diagnosticsNavItem] : []),
+  { href: "/settings", label: "브랜드 설정", icon: Settings },
+  { href: "/privacy", label: "개인정보", icon: ShieldCheck }
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {

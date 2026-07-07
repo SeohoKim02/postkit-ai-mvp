@@ -3,6 +3,7 @@ import { buildUploadPackagePrompt } from "@/lib/ai/promptBuilder";
 import { getAiProvider, getActiveProviderName } from "@/lib/ai/providerRegistry";
 import { AI_ERROR_MESSAGES } from "@/lib/ai/types";
 import { validateCreateInputForAi } from "@/lib/ai/validation";
+import { checkAiRateLimit, getRateLimitMessage } from "@/lib/server/rateLimit";
 import type { AiRecommendDesignRequest } from "@/lib/ai/types";
 import type { BrandProfile } from "@/types";
 
@@ -21,6 +22,21 @@ const fallbackBrandProfile: BrandProfile = {
 };
 
 export async function POST(request: Request) {
+  const rateLimit = checkAiRateLimit(request, "recommend-design");
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        requestId: "unknown",
+        provider: "mock",
+        warnings: [],
+        errorCode: "RATE_LIMIT",
+        userMessage: getRateLimitMessage(rateLimit.scope)
+      },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } }
+    );
+  }
+
   let body: Partial<AiRecommendDesignRequest>;
 
   try {

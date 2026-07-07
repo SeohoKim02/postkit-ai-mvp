@@ -86,7 +86,39 @@ function CheckRow({ check }: { check: DiagnosticCheck }) {
   );
 }
 
+const diagnosticsEnabled = process.env.NEXT_PUBLIC_ENABLE_DIAGNOSTICS === "true";
+
 export default function DiagnosticsPage() {
+  if (!diagnosticsEnabled) {
+    return <DiagnosticsDisabledPage />;
+  }
+
+  return <DiagnosticsContent />;
+}
+
+function DiagnosticsDisabledPage() {
+  return (
+    <AppShell>
+      <PageHeader
+        description="이 페이지는 운영자용 내부 진단 도구입니다. 현재 환경에서는 비활성화되어 있어요."
+        eyebrow="Diagnostics"
+        title="진단센터를 사용할 수 없어요"
+      />
+      <Card className="mt-6">
+        <p className="text-sm leading-6 text-muted">
+          진단센터는 <code className="font-bold">NEXT_PUBLIC_ENABLE_DIAGNOSTICS=true</code> 환경에서만 열립니다.
+        </p>
+        <div className="mt-4">
+          <LinkButton href="/dashboard" variant="secondary">
+            대시보드로 돌아가기
+          </LinkButton>
+        </div>
+      </Card>
+    </AppShell>
+  );
+}
+
+function DiagnosticsContent() {
   const [result, setResult] = useState<DiagnosticResult | null>(null);
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -219,7 +251,7 @@ export default function DiagnosticsPage() {
             </LinkButton>
           </div>
         }
-        description="브라우저 기능, localStorage 무결성, 크레딧, 계정, AI mock, Studio, 내보내기, 개인정보 상태를 한 화면에서 빠르게 점검합니다."
+        description="브라우저 기능, localStorage 무결성, 크레딧, 계정, 생성 API, Studio, 내보내기, 개인정보 상태를 한 화면에서 빠르게 점검합니다."
         eyebrow="Diagnostics"
         title="진단센터"
       />

@@ -4,6 +4,7 @@ import { generateTextWithProvider } from "@/lib/ai/provider";
 import { getAiProvider, getActiveProviderName } from "@/lib/ai/providerRegistry";
 import { AI_ERROR_MESSAGES, TEXT_GENERATION_TASKS } from "@/lib/ai/types";
 import { validateAiTasks, validateCreateInputForAi } from "@/lib/ai/validation";
+import { checkAiRateLimit, getRateLimitMessage } from "@/lib/server/rateLimit";
 import type { AiGenerateTextRequest } from "@/lib/ai/types";
 import type { BrandProfile } from "@/types";
 
@@ -35,6 +36,20 @@ function jsonError(errorCode: keyof typeof AI_ERROR_MESSAGES, status = 400, user
 }
 
 export async function POST(request: Request) {
+  const rateLimit = checkAiRateLimit(request, "generate-text");
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        requestId: "unknown",
+        provider: "mock",
+        errorCode: "RATE_LIMIT",
+        userMessage: getRateLimitMessage(rateLimit.scope)
+      },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } }
+    );
+  }
+
   let body: Partial<AiGenerateTextRequest>;
 
   try {

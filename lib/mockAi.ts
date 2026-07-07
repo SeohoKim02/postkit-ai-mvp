@@ -686,11 +686,13 @@ function buildHashtags(input: CreateFormInput, brand: BrandProfile, personalizat
   return Array.from(new Set(hashtags)).slice(0, guide.hashtagLimit);
 }
 
-function disclosureText(input: CreateFormInput, brand: BrandProfile, personalization?: PersonalizationProfile) {
+// brand.defaultDisclosure와 sponsoredDisclosureStyle은 "어떻게 표시할지"에 대한 지침문이라
+// 게시용 문구에 그대로 이어 붙이지 않는다. 표시용 문구만 반환한다.
+function disclosureText(input: CreateFormInput, personalization?: PersonalizationProfile) {
   const shouldAutoDisclose = personalization?.accountType === "광고/제휴 계정" && input.sponsorDisclosure === "none";
 
   if (input.sponsorDisclosure === "none") {
-    return shouldAutoDisclose ? personalization.sponsoredDisclosureStyle : "광고/협찬 표시 없음";
+    return shouldAutoDisclose ? "#광고 | 브랜드와 함께 만든 콘텐츠입니다." : "광고/협찬 표시 없음";
   }
 
   const map: Record<Exclude<CreateFormInput["sponsorDisclosure"], "none">, string> = {
@@ -699,7 +701,7 @@ function disclosureText(input: CreateFormInput, brand: BrandProfile, personaliza
     ad: "#광고 | 브랜드와 함께 만든 콘텐츠입니다."
   };
 
-  return `${map[input.sponsorDisclosure]} ${personalization?.sponsoredDisclosureStyle || brand.defaultDisclosure}`.trim();
+  return map[input.sponsorDisclosure];
 }
 
 function hasRepeatedWord(value: string) {
@@ -1123,7 +1125,7 @@ export async function generateMockUploadPackage(
     "hashtag",
     Math.max(1, guide.hashtagLimit)
   );
-  const disclosure = qualityFilterDisclosure(disclosureText(input, brand, personalization), context);
+  const disclosure = qualityFilterDisclosure(disclosureText(input, personalization), context);
   const title = `${context.product} ${guide.shortLabel} 콘텐츠`;
   const checklist = [
     "본문이 선택한 플랫폼 형식에 맞는지 확인",

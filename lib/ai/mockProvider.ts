@@ -1,20 +1,21 @@
+import { getPurposeLabel } from "@/lib/constants";
 import { recommendDesignTemplate } from "@/lib/designTemplates";
 import { generateMockUploadPackage } from "@/lib/mockAi";
 import { AI_PROMPT_VERSION, type AiProvider, type AiProviderResult, type AiRecommendDesignRequest } from "@/lib/ai/types";
 import { normalizeAiStructuredResult, validateStructuredResult } from "@/lib/ai/validation";
-import type { AiGenerationInfo, AiModelMetadata } from "@/types";
+import type { AiGenerationInfo, AiModelMetadata, Purpose } from "@/types";
 
 function shouldSimulateFailure(value: string) {
   return /\bmock[_-]?fail\b/i.test(value);
 }
 
-function makeSummary(productName: string, platform: string, purpose: string) {
-  return `${productName || "콘텐츠"}를 ${platform}에 올리기 위한 ${purpose} 업로드 패키지입니다.`;
+function makeSummary(productName: string, platform: string, purpose: Purpose) {
+  return `${productName || "콘텐츠"}를 ${platform}에 올리기 위한 ${getPurposeLabel(purpose)} 업로드 패키지입니다.`;
 }
 
 export const mockProvider: AiProvider = {
   name: "mock",
-  displayName: "PostKit MockProvider",
+  displayName: "PostKit 기본 생성기",
 
   supports(taskType) {
     return taskType !== "future_image_generation" && taskType !== "future_video_generation";
@@ -29,7 +30,7 @@ export const mockProvider: AiProvider = {
       return {
         ok: false,
         errorCode: "GENERATION_FAILED",
-        userMessage: "MockProvider 테스트 실패가 발생했어요.",
+        userMessage: "생성 중 문제가 생겨 요청을 완료하지 못했어요. 다시 시도해 주세요.",
         usedFallback: false,
         retryCount: 0
       };
@@ -155,7 +156,7 @@ export const mockProvider: AiProvider = {
         "content_summary",
         "design_recommendation"
       ],
-      message: "MockProvider가 준비되어 있어요. 외부 AI API는 호출하지 않습니다."
+      message: "기본 문구 생성기가 준비되어 있어요. 외부 AI API는 호출하지 않습니다."
     };
   }
 };

@@ -35,14 +35,16 @@ import { PACKAGE_CREDIT_COST } from "@/lib/credits";
 import {
   getCreditAccount,
   refundGenerationCredits,
+  refundGenerationCreditsByRequestId,
   spendCreditsForGeneration
 } from "@/lib/creditStorage";
-import { platforms, purposes, styles } from "@/lib/constants";
+import { getPurposeLabel, platforms, purposes, styles } from "@/lib/constants";
 import { generateUploadPackageWithAi } from "@/lib/ai/client";
 import {
   completeAiRequest,
   getAiPreferences,
   hasActiveAiRequest,
+  reconcileStaleAiRequests,
   startAiRequest
 } from "@/lib/ai/requestStorage";
 import {
@@ -57,7 +59,7 @@ import {
 } from "@/lib/personalization";
 import { commercialRelationshipOptions, rightsConfirmationItems, sensitiveInfoItems } from "@/lib/privacyContent";
 import { getPlatformContentGuide, normalizePlatform } from "@/lib/platformGuidance";
-import { addConsentRecord, addPrivacyAuditEvent, getPrivacyPreferences } from "@/lib/privacyStorage";
+import { addConsentRecord, addPrivacyAuditEvent, defaultPrivacyPreferences, getPrivacyPreferences } from "@/lib/privacyStorage";
 import { associateSessionImageWithContent, getSupportedStudioImageTypes, storeSessionImage } from "@/lib/sessionImageStore";
 import {
   addToHistory,
@@ -145,15 +147,18 @@ const defaultRightsChecks = rightsConfirmationItems.reduce<Record<string, boolea
   return acc;
 }, {});
 
+const SUPPORTED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
+const MAX_VIDEO_SIZE_MB = 100;
+
 export default function CreatePage() {
   const router = useRouter();
   const [input, setInput] = useState<CreateFormInput>(defaultInput);
   const [selectedPlatform, setSelectedPlatform] = useState<Platform | null>(null);
   const [brand, setBrand] = useState<BrandProfile>(defaultBrandProfile);
   const [personalization, setPersonalization] = useState<PersonalizationProfile | null>(null);
-  const [privacyPreferences, setPrivacyPreferences] = useState<PrivacyPreferences>(() => getPrivacyPreferences());
+  const [privacyPreferences, setPrivacyPreferences] = useState<PrivacyPreferences>(defaultPrivacyPreferences);
   const [rightsChecks, setRightsChecks] = useState<Record<string, boolean>>(defaultRightsChecks);
-  const [creditAccount, setCreditAccount] = useState<CreditAccount>(() => getCreditAccount({ applyMonthlyGrant: false }));
+  const [creditAccount, setCreditAccount] = useState<CreditAccount | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [isDragging, setIsDragging] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -168,6 +173,8 @@ export default function CreatePage() {
     setBrand(savedBrand);
     setPersonalization(savedPersonalization);
     setPrivacyPreferences(getPrivacyPreferences());
+    // 새로고침 등으로 완료 처리가 끊긴 생성 요청을 실패로 정리하고 차감 크레딧을 환불한다.
+    reconcileStaleAiRequests().forEach((staleRequestId) => refundGenerationCreditsByRequestId(staleRequestId));
     setCreditAccount(getCreditAccount());
     const nextInput: CreateFormInput = prefill
       ? { ...prefill, platform: normalizePlatform(prefill.platform) }
@@ -193,11 +200,13 @@ export default function CreatePage() {
 
   const requiredCreditText = useMemo(
     () =>
-      `${PACKAGE_CREDIT_COST} 크레딧 차감 예정 · 현재 ${creditAccount.totalCreditBalance.toLocaleString()} 크레딧 · 생성 후 ${Math.max(
-        0,
-        creditAccount.totalCreditBalance - PACKAGE_CREDIT_COST
-      ).toLocaleString()} 크레딧`,
-    [creditAccount.totalCreditBalance]
+      creditAccount
+        ? `체험 크레딧 ${PACKAGE_CREDIT_COST} 차감 예정 · 현재 ${creditAccount.totalCreditBalance.toLocaleString()} · 생성 후 ${Math.max(
+            0,
+            creditAccount.totalCreditBalance - PACKAGE_CREDIT_COST
+          ).toLocaleString()}`
+        : `체험 크레딧 ${PACKAGE_CREDIT_COST} 차감 예정 · 잔액 불러오는 중`,
+    [creditAccount]
   );
 
   const selectedPlatformGuide = selectedPlatform ? getPlatformContentGuide(selectedPlatform) : null;
@@ -250,6 +259,16 @@ export default function CreatePage() {
     }
 
     if (file.type.startsWith("video/")) {
+      if (!SUPPORTED_VIDEO_TYPES.includes(file.type)) {
+        setError("영상은 MP4, WebM, MOV 형식만 업로드할 수 있어요.");
+        return;
+      }
+
+      if (file.size > MAX_VIDEO_SIZE_MB * 1024 * 1024) {
+        setError(`영상 파일은 ${MAX_VIDEO_SIZE_MB}MB 이하만 업로드할 수 있어요.`);
+        return;
+      }
+
       const url = URL.createObjectURL(file);
       transientPreviewUrlRef.current = url;
       setPreviewUrl(url);
@@ -259,7 +278,7 @@ export default function CreatePage() {
       return;
     }
 
-    setError("PNG, JPEG, WebP 이미지 또는 영상 파일만 업로드할 수 있어요.");
+    setError("PNG, JPEG, WebP 이미지 또는 MP4, WebM, MOV 영상만 업로드할 수 있어요.");
   }
 
   function renderUploadPreview() {
@@ -279,6 +298,8 @@ export default function CreatePage() {
       return <video className="max-h-[280px] w-full rounded-lg object-cover" controls src={previewUrl} />;
     }
 
+    // 세션 전용 blob objectURL 미리보기라 next/image 최적화 대상이 아니다.
+    // eslint-disable-next-line @next/next/no-img-element
     return <img alt="업로드 미리보기" className="max-h-[280px] w-full rounded-lg object-cover" src={previewUrl} />;
   }
 
@@ -341,8 +362,8 @@ export default function CreatePage() {
       return;
     }
 
-    if (creditAccount.totalCreditBalance < PACKAGE_CREDIT_COST) {
-      setError(`크레딧이 부족해요. 업로드 패키지 생성에는 ${PACKAGE_CREDIT_COST} 크레딧이 필요합니다.`);
+    if (!creditAccount || creditAccount.totalCreditBalance < PACKAGE_CREDIT_COST) {
+      setError(`체험 크레딧이 부족해요. 업로드 패키지 생성에는 체험 크레딧 ${PACKAGE_CREDIT_COST}이 필요합니다.`);
       return;
     }
 
@@ -557,7 +578,7 @@ export default function CreatePage() {
             onDrop={handleDrop}
           >
             {renderUploadPreview()}
-            <input accept={`${getSupportedStudioImageTypes().join(",")},video/*`} className="sr-only" onChange={handleFileChange} type="file" />
+            <input accept={`${getSupportedStudioImageTypes().join(",")},${SUPPORTED_VIDEO_TYPES.join(",")}`} className="sr-only" onChange={handleFileChange} type="file" />
           </label>
           {input.uploadedFileName ? (
             <p className="mt-3 flex min-w-0 items-start gap-2 text-sm font-bold text-muted">
@@ -630,7 +651,7 @@ export default function CreatePage() {
               <div>
                 <div className="mb-3 flex flex-col gap-2 min-[430px]:flex-row min-[430px]:items-center min-[430px]:justify-between">
                   <h3 className="text-sm font-black">게시물 목적 선택</h3>
-                  <Badge tone="mint">{input.purpose}</Badge>
+                  <Badge tone="mint">{getPurposeLabel(input.purpose)}</Badge>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   {purposes.map((purpose) => (
@@ -640,7 +661,7 @@ export default function CreatePage() {
                       key={purpose}
                       onClick={() => updateInput("purpose", purpose)}
                       selected={input.purpose === purpose}
-                      title={purpose}
+                      title={getPurposeLabel(purpose)}
                     />
                   ))}
                 </div>
@@ -766,13 +787,10 @@ export default function CreatePage() {
                 <AlertCircle className="mt-0.5 shrink-0" size={18} aria-hidden="true" />
                 <div>
                   <p className="font-bold">{error}</p>
-                  {creditAccount.totalCreditBalance < PACKAGE_CREDIT_COST ? (
+                  {creditAccount && creditAccount.totalCreditBalance < PACKAGE_CREDIT_COST ? (
                     <div className="mt-3 flex flex-wrap gap-2">
                       <LinkButton href="/pricing" variant="soft">
-                        상위 플랜 보기
-                      </LinkButton>
-                      <LinkButton href="/pricing" variant="secondary">
-                        추가 크레딧 구매
+                        플랜 안내 보기
                       </LinkButton>
                     </div>
                   ) : null}

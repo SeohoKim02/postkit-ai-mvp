@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { CheckCircle2, FlaskConical, Image, ListChecks, Video, WandSparkles } from "lucide-react";
+import { CheckCircle2, FlaskConical, Image as ImageIcon, ListChecks, Video, WandSparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
@@ -14,7 +14,7 @@ const steps = [
   { id: "account", label: "샘플 계정 확인", href: "/account" },
   { id: "campaign", label: "샘플 캠페인 선택", href: "/campaigns" },
   { id: "create", label: "Create 입력 자동 채우기", href: "/create" },
-  { id: "results", label: "mock 콘텐츠 결과 확인", href: "/results" },
+  { id: "results", label: "샘플 콘텐츠 결과 확인", href: "/results" },
   { id: "studio", label: "Studio 디자인 열기", href: "/studio" },
   { id: "png", label: "PNG 생성 준비", href: "/studio" },
   { id: "video", label: "Video Studio 열기", href: "/video-studio" },
@@ -122,7 +122,7 @@ export default function DemoPage() {
           </div>
           <div className="mt-5 flex flex-wrap gap-2">
             <Button onClick={goCurrentStep} type="button">
-              {steps[step].id === "video" || steps[step].id === "webm" ? <Video size={17} aria-hidden="true" /> : <Image size={17} aria-hidden="true" />}
+              {steps[step].id === "video" || steps[step].id === "webm" ? <Video size={17} aria-hidden="true" /> : <ImageIcon size={17} aria-hidden="true" />}
               현재 단계 열기
             </Button>
             <Button disabled={step >= steps.length - 1} onClick={nextStep} type="button" variant="secondary">

@@ -4,6 +4,17 @@
 
 PostKit은 CapCut처럼 영상 편집을 하거나 Canva처럼 디자인을 직접 만드는 앱이 아니라, 업로드 직전의 SNS 문구 패키지를 빠르게 준비하는 도구입니다.
 
+## 무료 공개 베타 준비 상태 (2026-07)
+
+`FABLE_RELEASE_AUDIT.md`의 무료 공개 베타 출시 조건을 반영했습니다. OpenAI API 연결만 남은 상태입니다.
+
+- 기본 플랜은 Free(공개 베타)이며 매달 체험 크레딧 300을 지급합니다. 유료 플랜은 "준비 중"으로만 표시되고 결제와 크레딧 구매는 발생하지 않습니다.
+- 베타 기간에는 모든 이미지·영상 산출물에 "Made with PostKit" 워터마크가 적용됩니다.
+- Export 이미지 PNG는 Studio 디자인이 없어도 기본 템플릿을 프리셋 원본 크기로 실제 렌더링합니다. placeholder(mock preview) 이미지는 제거되었습니다.
+- `/api/ai/*` 라우트에 IP 기준 분당/일일 rate limit이 적용됩니다(`AI_RATE_LIMIT_PER_MINUTE`, `AI_RATE_LIMIT_PER_DAY`).
+- `/diagnostics` 진단센터는 `NEXT_PUBLIC_ENABLE_DIAGNOSTICS=true`인 빌드에서만 열립니다.
+- AI 생성 기본값은 mock이며, 실제 OpenAI 연결은 서버 환경변수(`AI_PROVIDER=openai`, `OPENAI_API_KEY`)로만 켭니다. `OPENAI_MODEL` 미설정 시 기본값 `gpt-4o-mini`를 사용합니다.
+
 ## RC-0.3 배포 준비 상태
 
 현재 소스는 `PostKit MVP RC-0.3` 배포 준비 상태입니다. RC-0.2 기능을 유지한 채 반응형 레이아웃 QA와 Vercel/GitHub 배포 문서 정리를 반영했습니다.
@@ -101,10 +112,10 @@ PostKit은 App Router `app/manifest.ts`로 기본 PWA manifest를 제공합니�
 
 현재 저장 구조는 localStorage 기반이므로 PC와 휴대폰 데이터는 자동 동기화되지 않습니다. 실제 로그인, DB, 클라우드 저장, 결제, AI API 연결 전까지는 mock/localStorage 서비스입니다.
 
-PWA 아이콘 TODO:
+PWA 아이콘:
 
-- 현재 프로젝트에는 `public` 아이콘 파일이 없어 manifest의 `icons` 항목을 일부러 생략했습니다.
-- 배포 전 `public/icons/icon-192.png`, `public/icons/icon-512.png`, `public/icons/maskable-icon-512.png`를 추가한 뒤 manifest의 `icons` 배열을 연결해야 합니다.
+- `app/icon.svg`가 파비콘과 manifest 아이콘으로 사용됩니다(`icons` 배열에 SVG any/maskable로 연결).
+- 더 정교한 해상도별 PNG 아이콘(192/512/maskable)은 브랜드 디자인 확정 후 교체 예정입니다.
 
 배포 전 필수 확인:
 
@@ -151,7 +162,7 @@ PWA 아이콘 TODO:
 - `/privacy-policy`: 개인정보 처리방침 초안
 - `/terms`: 이용약관 초안
 
-모바일 하단 내비게이션은 홈, 만들기, 결과, Studio, 내보내기, 더보기로 정리되어 있습니다. 더보기에서 Video, 히스토리, 캘린더, 캠페인, 크레딧, 계정, 진단, 브랜드, 개인정보, 설정에 접근합니다.
+모바일 하단 내비게이션은 홈, 만들기, 결과, Studio, 내보내기, 더보기로 정리되어 있습니다. 더보기에서 Video, 히스토리, 캘린더, 캠페인, 플랜, 계정, 브랜드 설정, 개인정보에 접근합니다. 진단 메뉴는 `NEXT_PUBLIC_ENABLE_DIAGNOSTICS=true`일 때만 표시됩니다.
 
 ## Video Studio v1
 
@@ -196,9 +207,11 @@ API 라우트:
 
 - `AI_PROVIDER`
 - `OPENAI_API_KEY`
-- `OPENAI_MODEL`
+- `OPENAI_MODEL` (미설정 시 기본값 `gpt-4o-mini`)
 - `AI_TIMEOUT_MS`
 - `AI_MAX_OUTPUT_TOKENS`
+- `AI_RATE_LIMIT_PER_MINUTE` (기본 10)
+- `AI_RATE_LIMIT_PER_DAY` (기본 200)
 
 실제 API 키는 서버 환경변수에만 저장해야 하며 클라이언트 코드, localStorage, 브라우저 번들에 넣지 않습니다.
 
@@ -237,44 +250,21 @@ API 라우트:
 
 비밀번호, 인증 토큰, API 키, 결제 정보는 localStorage에 저장하지 않습니다.
 
-## 구독 플랜
+## 구독 플랜 (무료 공개 베타)
 
-- Free: 월 0원 / 10 크레딧
-- Starter: 월 9,900원 / 120 크레딧
-- Creator: 월 14,900원 / 260 크레딧
-- Creator Plus: 월 19,900원 / 450 크레딧
-- Business: 월 49,000원 / 1,400 크레딧
-- Agency: 월 149,000원 / 5,500 크레딧
+- Free (공개 베타): 무료 / 매달 체험 크레딧 300 — 현재 사용 가능한 유일한 플랜
+- Starter · Creator · Creator Plus · Business · Agency: 전부 `availability: "coming_soon"`(준비 중) 표시만 제공하며 결제·업그레이드 불가
 
-추가 크레딧:
+크레딧 팩 구매 기능은 결제 연동 전까지 제거되었습니다. 가격과 크레딧 데이터는 `lib/plans.ts`에서 한 번만 관리합니다.
 
-- 100 크레딧: 8,900원
-- 300 크레딧: 24,900원
-- 700 크레딧: 54,900원
-- 1,500 크레딧: 99,000원
-- 5,000 크레딧: 249,000원
+## 크레딧 정책 v1 (체험 크레딧)
 
-가격과 크레딧 데이터는 `lib/plans.ts`에서 한 번만 관리합니다.
-
-## 크레딧 정책 v1
-
-- 업로드 패키지 1개 생성 비용은 30 크레딧입니다.
-- 구독 크레딧을 먼저 사용하고 부족한 만큼 구매 크레딧을 사용합니다.
+- 업로드 패키지 1개 생성 비용은 체험 크레딧 30입니다.
 - 잔액이 부족하면 생성하지 않고 차감도 하지 않습니다.
-- mock 생성 시작 전에 차감하고, 생성 오류가 발생하면 전액 환불 원장을 기록합니다.
-- 월 크레딧 지급은 서버 스케줄러 없이 앱 시작 시 날짜를 비교하는 mock 로직입니다.
-- 실제 운영에서는 서버에서 결제 상태, 지급 주기, 차감, 환불을 검증해야 합니다.
-
-이월 정책:
-
-- Free: 이월 없음
-- Starter: 이월 없음
-- Creator: 최대 50 크레딧
-- Creator Plus: 최대 100 크레딧
-- Business: 최대 300 크레딧
-- Agency: 최대 1,000 크레딧
-
-구매 크레딧은 구독 크레딧과 분리되며 월 초기화로 삭제하지 않습니다.
+- 생성 시작 전에 차감하고, 생성 오류가 발생하면 전액 환불 원장을 기록합니다. 새로고침으로 완료 처리가 끊긴 요청은 다음 방문 시 자동 정리·환불됩니다.
+- 월 체험 크레딧 지급은 서버 스케줄러 없이 앱 시작 시 날짜를 비교하는 클라이언트 로직입니다.
+- 실제 유료 운영 전에는 서버에서 결제 상태, 지급 주기, 차감, 환불을 검증해야 합니다.
+- Studio 이미지 제작, Video Studio 영상 제작, 내보내기·다운로드는 베타 기간 동안 추가 차감이 없습니다.
 
 ## SNS 내보내기와 다운로드 v1
 
@@ -282,7 +272,7 @@ PostKit의 내보내기는 실제 SNS 자동 게시가 아니라, 이미 생성�
 
 다운로드 가능 항목:
 
-- Studio에서 만든 실제 Canvas PNG. Studio 디자인이 없거나 렌더링에 실패하면 기존 mock 미리보기 PNG fallback 사용
+- 이미지 PNG: Studio에서 만든 디자인이 있으면 그 디자인을, 없으면 기본 템플릿을 프리셋 원본 크기로 Canvas 렌더링
 - 생성된 캡션 TXT
 - 해시태그 TXT
 - CTA 문구 TXT
@@ -345,13 +335,13 @@ Studio 처리 방식:
 - 업로드 이미지는 PNG, JPEG, WebP일 때 현재 브라우저 세션의 Object URL로만 연결합니다.
 - 업로드 원본 이미지 Blob이나 생성 PNG Blob은 localStorage에 저장하지 않습니다.
 - History에는 템플릿, 출력 크기, 문구, 텍스트 위치, 색상, 이미지 위치 같은 디자인 설정값만 저장합니다.
-- 새로고침 등으로 세션 이미지가 사라지면 기존 mock/fallback 배경으로 안전하게 렌더링합니다.
+- 새로고침 등으로 세션 이미지가 사라지면 브랜드 색상 기반 기본 배경으로 안전하게 렌더링합니다.
 - 다운로드와 Web Share 파일 공유 시 Canvas를 PNG Blob으로 변환합니다.
 - Blob URL은 다운로드 후 해제합니다.
 
 Export 연결:
 
-- Export Center는 저장된 Studio 디자인이 있으면 mock PNG보다 실제 Canvas PNG를 우선 사용합니다.
+- Export Center는 저장된 Studio 디자인이 있으면 그 디자인을, 없으면 기본 템플릿 렌더 PNG를 사용합니다.
 - Web Share API 파일 공유도 Studio PNG를 우선 사용합니다.
 - Results, History, Calendar, Campaigns에서 Studio로 이동할 수 있습니다.
 - History에서 디자인 다시 열기, 복제, PNG 다운로드를 제공합니다.
@@ -502,12 +492,8 @@ Export 연결:
 - AI 서비스 계층을 통한 입력 검증, requestId/idempotencyKey, mock 공급자 호출, 구조화 결과 저장
 - 게스트 모드, 테스트 계정, 워크스페이스, mock 멤버 역할, 데이터 export/import/delete 계층
 - 생성 전 크레딧 확인, 안전 차감, 실패 시 mock 환불
-- 구독/구매 크레딧 분리 관리
-- 월 크레딧 지급 mock 로직과 이월/만료 원장
-- 플랜 업그레이드 즉시 적용 및 차액 지급 mock
-- 플랜 다운그레이드 다음 지급일부터 예약 mock
-- 추가 크레딧 mock 구매와 원장 기록
-- 크레딧 원장 필터: 전체, 지급, 구매, 사용, 환불, 만료, 플랜 변경
+- 월 체험 크레딧 지급 로직과 원장 (플랜 변경·크레딧 구매 기능은 결제 연동 전까지 제거)
+- 크레딧 원장 필터: 전체, 지급, 사용, 환불, 만료
 - 결과별 복사, 전체 복사, 캡션 선택, 직접 수정, SNS 공유 준비 UI
 - 결과 좋아요/별로예요, 내 스타일로 저장, 다시 생성 기록
 - Settings의 개인화 데이터 내보내기/불러오기/초기화/온보딩 다시 진행
@@ -608,7 +594,7 @@ API 키나 시크릿은 코드에 하드코딩하지 않았습니다. 실제 연
 
 환경변수 예시:
 
-- `NEXT_PUBLIC_ENABLE_DIAGNOSTICS`: 실제 서비스에서 진단센터 노출 정책을 제어하기 위한 후보 이름입니다. 현재 MVP에서는 값이 없어도 접근 가능합니다.
+- `NEXT_PUBLIC_ENABLE_DIAGNOSTICS`: `true`로 설정한 빌드에서만 `/diagnostics` 페이지와 내비게이션 항목이 열립니다. 미설정 시 진단센터는 비활성화 안내만 표시합니다.
 
 자세한 QA 순서는 [QA_GUIDE.md](./QA_GUIDE.md)를 확인하세요.
 

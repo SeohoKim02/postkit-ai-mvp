@@ -22,10 +22,11 @@ import { Badge } from "@/components/ui/Badge";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { updateScheduleAfterExport } from "@/lib/calendarStorage";
+import { getPurposeLabel } from "@/lib/constants";
 import { renderDesignToBlob } from "@/lib/canvasRenderer";
 import { findOutputPresetForExportPreset } from "@/lib/designTemplates";
-import { getLatestDesignForContent, makeDesignFileName, markDesignExported } from "@/lib/designStorage";
-import { createMockPreviewBlob, downloadBlob, downloadExportAsset } from "@/lib/downloadUtils";
+import { createDefaultDesignProject, getLatestDesignForContent, makeDesignFileName, markDesignExported } from "@/lib/designStorage";
+import { downloadBlob, downloadExportAsset } from "@/lib/downloadUtils";
 import { addExportHistoryEntry, getExportHistory, saveExportPreferences } from "@/lib/exportStorage";
 import { getExportPresetById, getRecommendedPreset } from "@/lib/exportPresets";
 import {
@@ -38,7 +39,7 @@ import {
 } from "@/lib/exportUtils";
 import { isWebShareSupported, openPlatformUrl, shareUploadPackage } from "@/lib/shareUtils";
 import { getPlatformContentGuide } from "@/lib/platformGuidance";
-import { getCurrentResult, getHistory, saveCurrentResult, updatePersonalizationProfile } from "@/lib/storage";
+import { getBrandProfile, getCurrentResult, getHistory, getPersonalizationProfile, saveCurrentResult, updatePersonalizationProfile } from "@/lib/storage";
 import { getLatestVideoProjectForContent, markVideoProjectDownloaded, markVideoProjectExported, mergeVideoProjectIntoResult, projectToRenderSettings } from "@/lib/video/videoStorage";
 import { getVideoPresetByPlatform } from "@/lib/video/videoPresets";
 import { createVideoObjectUrl, getVideoExportAsset } from "@/lib/video/videoSessionStore";
@@ -89,7 +90,12 @@ function designForExportPreset(project: DesignProject, preset: ExportPreset): De
   };
 }
 
-function withDesignCanvasAsset(exportPackage: ExportPackage, preset: ExportPreset, design?: DesignProject): ExportPackage {
+function withDesignCanvasAsset(
+  exportPackage: ExportPackage,
+  preset: ExportPreset,
+  design: DesignProject | undefined,
+  isStudioDesign: boolean
+): ExportPackage {
   if (!design) {
     return exportPackage;
   }
@@ -102,16 +108,16 @@ function withDesignCanvasAsset(exportPackage: ExportPackage, preset: ExportPrese
       ...exportPackage.metadata,
       designId: design.id,
       designTemplateId: design.templateId,
+      designSource: isStudioDesign ? "studio" : "default_template",
       designOutputSize: `${project.width}x${project.height}`
     },
     assets: exportPackage.assets.map((asset) =>
-      asset.kind === "image" && asset.source === "mock_preview"
+      asset.kind === "image" && asset.source === "design_canvas"
         ? {
             ...asset,
             id: `${preset.id}-design-canvas`,
-            label: "Studio 실제 디자인 PNG",
+            label: isStudioDesign ? "Studio 디자인 PNG" : "기본 템플릿 디자인 PNG",
             fileName: makeDesignFileName(project),
-            source: "design_canvas" as const,
             width: project.width,
             height: project.height
           }
@@ -146,16 +152,24 @@ export default function ExportPage() {
   const platformGuide = result ? getPlatformContentGuide(result.platform) : null;
   const latestDesign = useMemo(
     () => (result ? result.designs?.[0] ?? getLatestDesignForContent(result.id) : undefined),
-    [result, selectedPresetId, exportHistory.length]
+    [result]
   );
   const latestVideo = useMemo(
     () => (result ? result.videoProjects?.[0] ?? getLatestVideoProjectForContent(result.id) : undefined),
-    [result, exportHistory.length]
+    [result]
   );
+  const fallbackDesign = useMemo(
+    () =>
+      result && !latestDesign
+        ? createDefaultDesignProject(result, getBrandProfile(), getPersonalizationProfile(), findOutputPresetForExportPreset(selectedPresetId).id)
+        : undefined,
+    [result, latestDesign, selectedPresetId]
+  );
+  const effectiveDesign = latestDesign ?? fallbackDesign;
   const videoAsset = latestVideo ? getVideoExportAsset(latestVideo.id) : undefined;
   const exportPackage = useMemo(
-    () => (result ? withDesignCanvasAsset(buildExportPackage(result, selectedPreset), selectedPreset, latestDesign) : null),
-    [latestDesign, result, selectedPreset]
+    () => (result ? withDesignCanvasAsset(buildExportPackage(result, selectedPreset), selectedPreset, effectiveDesign, Boolean(latestDesign)) : null),
+    [effectiveDesign, latestDesign, result, selectedPreset]
   );
   const checklist = useMemo(() => (result ? buildDisclosureChecklist(result) : []), [result]);
   const fullUploadText = useMemo(() => (result ? composeFullUploadText(result) : ""), [result]);
@@ -169,7 +183,7 @@ export default function ExportPage() {
     }
 
     setVideoUrl(createVideoObjectUrl(latestVideo.id));
-  }, [latestVideo, videoAsset?.createdAt]);
+  }, [latestVideo, videoAsset?.blob, videoAsset?.createdAt]);
 
   function flash(message: string) {
     setFeedback(message);
@@ -319,21 +333,21 @@ export default function ExportPage() {
   }
 
   async function downloadAssetForPreset(asset: ExportAsset, nextPackage: ExportPackage, preset: ExportPreset): Promise<DownloadResult> {
-    if (asset.kind === "image" && asset.source === "design_canvas" && latestDesign) {
+    if (asset.kind === "image" && asset.source === "design_canvas" && effectiveDesign) {
       try {
-        const project = designForExportPreset(latestDesign, preset);
+        const project = designForExportPreset(effectiveDesign, preset);
         const rendered = await renderDesignToBlob(project);
         if (!rendered.ok || !rendered.blob) {
           return {
             ok: false,
             fileName: asset.fileName,
-            error: rendered.error ?? "Studio 디자인 PNG를 생성하지 못했어요."
+            error: rendered.error ?? "이미지 PNG를 생성하지 못했어요."
           };
         }
 
         const download = downloadBlob(rendered.blob, asset.fileName || makeDesignFileName(project));
 
-        if (download.ok) {
+        if (download.ok && latestDesign) {
           markDesignExported(latestDesign.id);
         }
 
@@ -342,35 +356,28 @@ export default function ExportPage() {
         return {
           ok: false,
           fileName: asset.fileName,
-          error: error instanceof Error ? error.message : "Studio 디자인 PNG를 생성하지 못했어요."
+          error: error instanceof Error ? error.message : "이미지 PNG를 생성하지 못했어요."
         };
       }
     }
 
-    return downloadExportAsset(asset, nextPackage, preset);
+    return downloadExportAsset(asset, nextPackage);
   }
 
   async function createShareImageBlob(nextPackage: ExportPackage, preset: ExportPreset) {
     const imageAsset = nextPackage.assets.find((asset) => asset.kind === "image" && asset.available);
 
-    if (!imageAsset) {
+    if (!imageAsset || !effectiveDesign) {
       return { imageAsset: undefined, imageBlob: null };
     }
 
-    if (imageAsset.source === "design_canvas" && latestDesign) {
-      try {
-        const project = designForExportPreset(latestDesign, preset);
-        const rendered = await renderDesignToBlob(project);
-        return { imageAsset, imageBlob: rendered.ok ? rendered.blob ?? null : null };
-      } catch {
-        return { imageAsset, imageBlob: null };
-      }
+    try {
+      const project = designForExportPreset(effectiveDesign, preset);
+      const rendered = await renderDesignToBlob(project);
+      return { imageAsset, imageBlob: rendered.ok ? rendered.blob ?? null : null };
+    } catch {
+      return { imageAsset, imageBlob: null };
     }
-
-    return {
-      imageAsset,
-      imageBlob: await createMockPreviewBlob(nextPackage, preset)
-    };
   }
 
   async function copyText(label: string, field: string, text: string, preset = selectedPreset) {
@@ -409,7 +416,7 @@ export default function ExportPage() {
 
     setIsWorking(true);
     const nextPackage = result
-      ? withDesignCanvasAsset(buildExportPackage(result, preset), preset, latestDesign)
+      ? withDesignCanvasAsset(buildExportPackage(result, preset), preset, effectiveDesign, Boolean(latestDesign))
       : exportPackage;
     const nextAsset = nextPackage.assets.find((item) => item.contentType === asset.contentType && item.kind === asset.kind) ?? asset;
     const download = await downloadAssetForPreset(nextAsset, nextPackage, preset);
@@ -437,7 +444,7 @@ export default function ExportPage() {
     if (!result || isWorking) return;
 
     setIsWorking(true);
-    const nextPackage = withDesignCanvasAsset(buildExportPackage(result, preset), preset, latestDesign);
+    const nextPackage = withDesignCanvasAsset(buildExportPackage(result, preset), preset, effectiveDesign, Boolean(latestDesign));
     const downloadedFiles: string[] = [];
 
     for (const asset of nextPackage.assets) {
@@ -481,7 +488,7 @@ export default function ExportPage() {
 
     setIsWorking(true);
     const shareText = composeFullUploadText(result);
-    const nextPackage = withDesignCanvasAsset(buildExportPackage(result, preset), preset, latestDesign);
+    const nextPackage = withDesignCanvasAsset(buildExportPackage(result, preset), preset, effectiveDesign, Boolean(latestDesign));
     const { imageAsset, imageBlob } = await createShareImageBlob(nextPackage, preset);
     const files = imageBlob && typeof File !== "undefined" && imageAsset ? [new File([imageBlob], imageAsset.fileName, { type: "image/png" })] : [];
     const share = await shareUploadPackage({
@@ -622,7 +629,7 @@ export default function ExportPage() {
             </Button>
           </>
         }
-        description={`${formatDate(result.createdAt)} · ${result.platform} · ${platformGuide?.resultFormat ?? result.purpose} · 다운로드/내보내기 추가 크레딧 0`}
+        description={`${formatDate(result.createdAt)} · ${result.platform} · ${platformGuide?.resultFormat ?? getPurposeLabel(result.purpose)} · 다운로드/내보내기 추가 크레딧 0`}
         eyebrow="Export Center"
         title="SNS 내보내기 센터"
       />
@@ -647,11 +654,11 @@ export default function ExportPage() {
       <div className="mt-4 rounded-lg border border-line bg-white p-4 shadow-soft">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-black text-ink">{latestDesign ? "Studio 실제 디자인 PNG 사용 중" : "아직 Studio 디자인 PNG가 없어요"}</p>
+            <p className="text-sm font-black text-ink">{latestDesign ? "Studio에서 편집한 디자인 PNG 사용 중" : "기본 템플릿 디자인 PNG 사용 중"}</p>
             <p className="mt-1 text-sm leading-6 text-muted">
               {latestDesign
-                ? `${platformGuide?.shortLabel ?? "SNS"} 내보내기에는 mock 이미지보다 Studio에서 만든 Canvas PNG를 우선 사용합니다.`
-                : `${platformGuide?.studioActionLabel ?? "Studio에서 PNG 만들기"}를 진행하면 Export Center에서 실제 PNG를 우선 사용할 수 있어요.`}
+                ? `${platformGuide?.shortLabel ?? "SNS"} 내보내기 이미지는 Studio에서 편집한 디자인을 프리셋 원본 크기로 렌더링합니다.`
+                : "아직 Studio에서 편집한 디자인이 없어 브랜드 기본 템플릿으로 이미지를 렌더링해요. Studio에서 직접 편집하면 그 디자인이 우선 적용됩니다."}
             </p>
           </div>
           <LinkButton href="/studio" onClick={() => result && saveCurrentResult(result)} variant={latestDesign ? "secondary" : "soft"}>
@@ -712,7 +719,7 @@ export default function ExportPage() {
               </div>
               <div className="min-w-0 rounded-lg border border-line bg-wash p-3">
                 <p className="text-xs font-black text-muted">게시물 목적</p>
-                <p className="mt-1 break-keep font-bold [overflow-wrap:anywhere]">{result.purpose}</p>
+                <p className="mt-1 break-keep font-bold [overflow-wrap:anywhere]">{getPurposeLabel(result.purpose)}</p>
               </div>
               <div className="min-w-0 rounded-lg border border-line bg-wash p-3">
                 <p className="text-xs font-black text-muted">개인화 스타일</p>

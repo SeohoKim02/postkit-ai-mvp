@@ -43,6 +43,7 @@ import {
   upsertContentIdea
 } from "@/lib/calendarStorage";
 import { linkCampaignSchedule, getCampaigns } from "@/lib/campaignStorage";
+import { getPurposeLabel } from "@/lib/constants";
 import { getExportHistory } from "@/lib/exportStorage";
 import { composeFullUploadText } from "@/lib/exportUtils";
 import { getHistory, saveCurrentResult, savePrefill, updatePersonalizationProfile } from "@/lib/storage";
@@ -643,7 +644,7 @@ export default function CalendarPage() {
           <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <label className="sm:col-span-2 xl:col-span-3"><span className="field-label">일정 제목</span><input className="field" onChange={(event) => updateForm("title", event.target.value)} value={form.title} /></label>
             <label><span className="field-label">플랫폼</span><select className="field" onChange={(event) => updateForm("platform", event.target.value as Platform)} value={form.platform}>{platforms.map((platform) => <option key={platform}>{platform}</option>)}</select></label>
-            <label><span className="field-label">게시물 목적</span><select className="field" onChange={(event) => updateForm("purpose", event.target.value as Purpose)} value={form.purpose}>{purposes.map((purpose) => <option key={purpose}>{purpose}</option>)}</select></label>
+            <label><span className="field-label">게시물 목적</span><select className="field" onChange={(event) => updateForm("purpose", event.target.value as Purpose)} value={form.purpose}>{purposes.map((purpose) => <option key={purpose} value={purpose}>{getPurposeLabel(purpose)}</option>)}</select></label>
             <label><span className="field-label">상태</span><select className="field" onChange={(event) => updateForm("status", event.target.value as ContentScheduleStatus)} value={form.status}>{calendarStatuses.map((status) => <option key={status}>{status}</option>)}</select></label>
             <label><span className="field-label">게시 날짜</span><input className="field" onChange={(event) => updateForm("date", event.target.value)} type="date" value={form.date} /></label>
             <label><span className="field-label">게시 시간</span><input className="field" onChange={(event) => updateForm("time", event.target.value)} type="time" value={form.time} /></label>
@@ -732,7 +733,7 @@ export default function CalendarPage() {
             <input className="field" onChange={(event) => setIdeaForm((current) => ({ ...current, title: event.target.value }))} placeholder="아이디어 제목" value={ideaForm.title} />
             <div className="grid gap-3 sm:grid-cols-2">
               <select className="field" onChange={(event) => setIdeaForm((current) => ({ ...current, platform: event.target.value as Platform }))} value={ideaForm.platform}>{platforms.map((platform) => <option key={platform}>{platform}</option>)}</select>
-              <select className="field" onChange={(event) => setIdeaForm((current) => ({ ...current, purpose: event.target.value as Purpose }))} value={ideaForm.purpose}>{purposes.map((purpose) => <option key={purpose}>{purpose}</option>)}</select>
+              <select className="field" onChange={(event) => setIdeaForm((current) => ({ ...current, purpose: event.target.value as Purpose }))} value={ideaForm.purpose}>{purposes.map((purpose) => <option key={purpose} value={purpose}>{getPurposeLabel(purpose)}</option>)}</select>
             </div>
             <textarea className="field min-h-24 resize-none" onChange={(event) => setIdeaForm((current) => ({ ...current, memo: event.target.value }))} placeholder="메모" value={ideaForm.memo} />
             <input className="field" onChange={(event) => setIdeaForm((current) => ({ ...current, preferredDate: event.target.value }))} type="date" value={ideaForm.preferredDate} />

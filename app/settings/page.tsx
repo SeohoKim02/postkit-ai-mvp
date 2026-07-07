@@ -104,7 +104,7 @@ export default function SettingsPage() {
           {saved ? "저장됨" : "저장"}
         </Button>
         }
-        description="이 값은 mock AI 결과의 말투, 해시태그, 광고 표시 방식에 반영됩니다."
+        description="이 값은 생성 결과의 말투, 해시태그, 광고 표시 방식에 반영됩니다."
         eyebrow="Brand/Profile"
         title="개인 맞춤형 학습 설정"
       />
@@ -122,7 +122,7 @@ export default function SettingsPage() {
           </span>
           <div className="min-w-0">
             <h2 className="break-keep text-lg font-black">생성 결과에 반영될 기본값</h2>
-            <p className="mt-1 text-sm text-muted">실제 학습은 아니며, mock AI 함수가 이 값을 참고해 톤을 바꿉니다.</p>
+            <p className="mt-1 text-sm text-muted">서버 학습이 아니라 이 브라우저에 저장된 값을 참고해 생성 톤을 조정합니다.</p>
           </div>
         </div>
 
@@ -300,7 +300,7 @@ export default function SettingsPage() {
           <div className="flex flex-col gap-3 border-b border-line pb-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h2 className="text-lg font-black">내 스타일 학습</h2>
-              <p className="mt-1 text-sm leading-6 text-muted">선택, 복사, 수정한 기록을 바탕으로 다음 mock 생성 결과를 조정합니다.</p>
+              <p className="mt-1 text-sm leading-6 text-muted">선택, 복사, 수정한 기록을 바탕으로 다음 생성 결과를 조정합니다.</p>
             </div>
             <Badge tone="coral">{getPersonalizationLevel(personalization)}</Badge>
           </div>

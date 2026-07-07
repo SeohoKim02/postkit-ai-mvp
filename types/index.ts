@@ -703,7 +703,7 @@ export type ExportAsset = {
   fileName: string;
   mimeType: string;
   available: boolean;
-  source: "mock_preview" | "uploaded_original" | "design_canvas" | "video_studio" | "text" | "metadata";
+  source: "uploaded_original" | "design_canvas" | "video_studio" | "text" | "metadata";
   text?: string;
   unavailableReason?: string;
   width?: number;

@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { linkCampaignContent } from "@/lib/campaignStorage";
+import { getPurposeLabel } from "@/lib/constants";
 import { linkScheduleContent } from "@/lib/calendarStorage";
 import { drawDesignToCanvas, renderDesignToBlob } from "@/lib/canvasRenderer";
 import { designOutputPresets, designTemplates, getDesignOutputPreset, recommendDesignTemplate } from "@/lib/designTemplates";
@@ -404,7 +405,7 @@ export default function StudioPage() {
             </Button>
           </>
         }
-        description={`${result.platform} · ${result.purpose} · Canvas 기반 PNG · 추가 크레딧 0`}
+        description={`${result.platform} · ${getPurposeLabel(result.purpose)} · Canvas 기반 PNG · 추가 크레딧 0`}
         eyebrow="PostKit Studio"
         title="SNS 게시물 이미지 만들기"
       />

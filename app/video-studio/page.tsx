@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { updateScheduleAfterExport } from "@/lib/calendarStorage";
+import { getPurposeLabel } from "@/lib/constants";
 import { downloadBlob, downloadTextFile } from "@/lib/downloadUtils";
 import { addExportHistoryEntry } from "@/lib/exportStorage";
 import { getSelectedCaption } from "@/lib/exportUtils";
@@ -159,7 +160,6 @@ export default function VideoStudioPage() {
       .filter(Boolean) as string[];
   }, [project]);
 
-  const imageKey = imageUrls.join("|");
   const selectedTemplate = project ? getVideoTemplate(project.templateId) : videoTemplates[0];
   const selectedPreset = project ? getVideoPresetByPlatform(project.platform) : videoPresets[0];
   const generatedAsset = project ? getVideoExportAsset(project.id) : undefined;
@@ -174,7 +174,7 @@ export default function VideoStudioPage() {
 
     const url = createVideoObjectUrl(project.id);
     setVideoUrl(url);
-  }, [generatedAsset?.createdAt, generatedAsset?.videoProjectId, project]);
+  }, [generatedAsset?.blob, generatedAsset?.createdAt, generatedAsset?.videoProjectId, project]);
 
   useEffect(() => {
     if (!project || !settings || !canvasRef.current) return;
@@ -221,7 +221,7 @@ export default function VideoStudioPage() {
       active = false;
       if (raf) window.cancelAnimationFrame(raf);
     };
-  }, [imageKey, previewPlaying, previewRefreshKey, project, settings]);
+  }, [imageUrls, previewPlaying, previewRefreshKey, project, settings]);
 
   function flash(message: string) {
     setFeedback(message);
@@ -1013,7 +1013,7 @@ export default function VideoStudioPage() {
             <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted">{getSelectedCaption(result)}</p>
             <div className="mt-3 flex flex-wrap gap-2">
               <Badge tone="sky">{result.platform}</Badge>
-              <Badge tone="mint">{result.purpose}</Badge>
+              <Badge tone="mint">{getPurposeLabel(result.purpose)}</Badge>
               {result.campaignName ? <Badge tone="lemon">{result.campaignName}</Badge> : null}
             </div>
           </Card>

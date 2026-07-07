@@ -163,11 +163,14 @@ function parsePositiveInt(value: string | undefined, fallback: number, min: numb
   return Math.min(max, Math.max(min, Math.floor(parsed)));
 }
 
+export const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
+
 export function getOpenAiConfig(): OpenAiConfig | null {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
-  const model = process.env.OPENAI_MODEL?.trim();
+  // OPENAI_MODEL 미설정 시 조용히 mock으로 빠지지 않도록 기본 모델을 사용한다.
+  const model = process.env.OPENAI_MODEL?.trim() || DEFAULT_OPENAI_MODEL;
 
-  if (!apiKey || !model) {
+  if (!apiKey) {
     return null;
   }
 

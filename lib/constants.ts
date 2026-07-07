@@ -23,6 +23,19 @@ export const purposes: Purpose[] = [
   "Review Post"
 ];
 
+export const purposeLabels: Record<Purpose, string> = {
+  "Personal Post": "개인 게시물",
+  "Sponsored Post": "협찬 게시물",
+  "Product Promotion": "제품 홍보",
+  "New Arrival": "신상품 소개",
+  "Discount Event": "할인 이벤트",
+  "Review Post": "후기 게시물"
+};
+
+export function getPurposeLabel(purpose: Purpose) {
+  return purposeLabels[purpose] ?? purpose;
+}
+
 export const styles: StyleTone[] = [
   "감성형",
   "깔끔한 정보형",

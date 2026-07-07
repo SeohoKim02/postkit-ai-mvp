@@ -34,7 +34,7 @@ function formatDate(value: string) {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [creditAccount, setCreditAccount] = useState<CreditAccount>(() => getCreditAccount({ applyMonthlyGrant: false }));
+  const [creditAccount, setCreditAccount] = useState<CreditAccount | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [exportHistory, setExportHistory] = useState<ExportHistoryEntry[]>([]);
   const [schedules, setSchedules] = useState<ContentSchedule[]>([]);
@@ -55,7 +55,7 @@ export default function DashboardPage() {
   }, []);
 
   const recent = history.slice(0, 3);
-  const possiblePackages = Math.floor(creditAccount.totalCreditBalance / PACKAGE_CREDIT_COST);
+  const possiblePackages = creditAccount ? Math.floor(creditAccount.totalCreditBalance / PACKAGE_CREDIT_COST) : 0;
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
   const monthlyGenerations = history.filter((item) => {
@@ -158,7 +158,7 @@ export default function DashboardPage() {
         <CreditMeter account={creditAccount} />
         <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <StatCard
-            helper="mock localStorage 기준으로 집계됩니다."
+            helper="이 브라우저에 저장된 기록 기준으로 집계됩니다."
             icon={PackageCheck}
             title="이번 달 생성 횟수"
             value={`${monthlyGenerations}회`}
@@ -170,7 +170,7 @@ export default function DashboardPage() {
             value={`${history.length}개`}
           />
           <StatCard
-            helper={`구독 ${creditAccount.subscriptionCreditBalance.toLocaleString()} · 구매 ${creditAccount.purchasedCreditBalance.toLocaleString()}`}
+            helper={`체험 크레딧 잔액 ${creditAccount ? creditAccount.totalCreditBalance.toLocaleString() : "확인 중"}`}
             icon={Zap}
             title="생성 가능 패키지"
             value={`${possiblePackages}개`}
@@ -180,10 +180,10 @@ export default function DashboardPage() {
 
       <div className="mt-4 flex min-w-0 flex-col gap-3 rounded-lg border border-line bg-white p-4 shadow-soft sm:flex-row sm:items-center sm:justify-between">
         <p className="min-w-0 text-sm leading-6 text-muted">
-          업로드 패키지는 {PACKAGE_CREDIT_COST} 크레딧입니다. 구독 크레딧을 먼저 사용하고 부족한 만큼 구매 크레딧을 사용합니다.
+          업로드 패키지 1회 생성에 체험 크레딧 {PACKAGE_CREDIT_COST}을 사용합니다. 무료 공개 베타 기간에는 매월 체험 크레딧이 무료로 지급됩니다.
         </p>
         <LinkButton className="w-full sm:w-auto" href="/pricing" variant="secondary">
-          크레딧 관리
+          플랜 안내
         </LinkButton>
       </div>
 

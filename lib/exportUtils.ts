@@ -150,14 +150,14 @@ export function buildExportAssets(result: GeneratedPackage, preset: ExportPreset
 
   return [
     {
-      id: `${preset.id}-mock-image`,
+      id: `${preset.id}-image`,
       kind: "image",
       contentType: imageContentType,
-      label: `${preset.platform} 미리보기 PNG`,
+      label: `${preset.platform} 이미지 PNG`,
       fileName: makeExportFileName(result, preset, imageContentType, "png"),
       mimeType: "image/png",
       available: true,
-      source: "mock_preview",
+      source: "design_canvas",
       width: preset.width,
       height: preset.height
     },

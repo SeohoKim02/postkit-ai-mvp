@@ -33,7 +33,7 @@ const deleteActions: Array<{ scope: DeleteDataScope; title: string; description:
   { scope: "personalization", title: "개인 맞춤 학습 데이터 삭제", description: "선택, 복사, 수정 기반 학습 프로필을 삭제합니다." },
   { scope: "exports", title: "내보내기 기록 삭제", description: "다운로드와 SNS 공유 준비 기록을 삭제합니다." },
   { scope: "planning", title: "캠페인과 일정 삭제", description: "캘린더, 캠페인, 아이디어, 앱 내부 알림을 삭제합니다." },
-  { scope: "all", title: "전체 계정 데이터 삭제", description: "PostKit mock localStorage 데이터를 삭제합니다. 감사 기록에는 삭제 이벤트만 남깁니다.", danger: true }
+  { scope: "all", title: "전체 계정 데이터 삭제", description: "이 브라우저에 저장된 PostKit 데이터를 모두 삭제합니다. 감사 기록에는 삭제 이벤트만 남깁니다.", danger: true }
 ];
 
 const privacyToggles: Array<{
@@ -61,7 +61,7 @@ const privacyToggles: Array<{
   {
     key: "originalFileStorageAllowed",
     title: "원본 파일 저장 허용",
-    description: "현재 mock 단계에서는 원본 파일을 서버로 보내지 않으며, 기본값은 저장하지 않음입니다."
+    description: "무료 공개 베타 단계에서는 원본 파일을 서버로 보내지 않으며, 기본값은 저장하지 않음입니다."
   },
   {
     key: "analyticsAllowed",
@@ -222,7 +222,7 @@ export default function PrivacyPage() {
       requestedAction: "삭제 요청"
     });
     refreshPrivacyState();
-    flash("권리 침해 신고를 mock 상태로 접수했어요.");
+    flash("권리 침해 신고를 이 브라우저에 기록해 접수했어요.");
   }
 
   return (
@@ -238,7 +238,7 @@ export default function PrivacyPage() {
             </LinkButton>
           </div>
         }
-        description="출시 전 필요한 개인정보 보호와 콘텐츠 권리 보호 흐름을 mock/localStorage 수준으로 관리합니다."
+        description="개인정보 보호와 콘텐츠 권리 보호 흐름을 이 브라우저(localStorage) 안에서 관리합니다."
         eyebrow="Privacy & Rights"
         title="개인정보 보호센터"
       />
@@ -276,7 +276,7 @@ export default function PrivacyPage() {
               <LockKeyhole size={22} aria-hidden="true" />
             </span>
             <div>
-              <h2 className="text-lg font-black">현재 mock 보안 구조</h2>
+              <h2 className="text-lg font-black">현재 데이터 보관 구조</h2>
               <p className="mt-2 text-sm leading-6 text-muted">
                 비밀번호, SNS 로그인, API 키를 요구하거나 저장하지 않습니다. 업로드 파일은 서버로 전송하지 않고, 브라우저 미리보기 URL은 화면을 벗어나면 해제합니다.
                 실제 서비스 전환 시 서버 접근 제어, 암호화, 삭제 검증, 위탁·국외이전 검토가 필요합니다.
@@ -358,7 +358,7 @@ export default function PrivacyPage() {
 
         <Card>
           <h2 className="text-lg font-black">데이터 보관 기간</h2>
-          <p className="mt-1 text-sm leading-6 text-muted">mock 단계에서는 만료 대상 표시와 업로드 파일 참조 정리만 제공합니다.</p>
+          <p className="mt-1 text-sm leading-6 text-muted">베타 단계에서는 만료 대상 표시와 업로드 파일 참조 정리만 제공합니다.</p>
 
           <label className="mt-5 block">
             <span className="field-label">원본 파일 보관 기간</span>
@@ -400,7 +400,7 @@ export default function PrivacyPage() {
         <div className="flex flex-col gap-3 border-b border-line pb-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h2 className="text-lg font-black">데이터 내보내기와 삭제</h2>
-            <p className="mt-1 text-sm leading-6 text-muted">삭제 전 확인 절차를 거치며, mock 데이터는 이 브라우저의 localStorage 기준으로 처리합니다.</p>
+            <p className="mt-1 text-sm leading-6 text-muted">삭제 전 확인 절차를 거치며, 이 브라우저의 localStorage에 저장된 데이터를 기준으로 처리합니다.</p>
           </div>
           <Button onClick={handleExportData} type="button" variant="secondary">
             <Download size={16} aria-hidden="true" />
@@ -461,7 +461,7 @@ export default function PrivacyPage() {
 
         <Card>
           <h2 className="text-lg font-black">권리 침해 신고 및 삭제 요청</h2>
-          <p className="mt-1 text-sm leading-6 text-muted">현재는 localStorage에 신고 상태를 저장하는 mock UI입니다.</p>
+          <p className="mt-1 text-sm leading-6 text-muted">현재는 신고 상태를 이 브라우저(localStorage)에 저장합니다.</p>
 
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <label>
@@ -544,7 +544,7 @@ export default function PrivacyPage() {
         <Card>
           <h2 className="text-lg font-black">미성년자 및 민감정보 안내</h2>
           <div className="mt-3 space-y-3 text-sm leading-6 text-muted">
-            <p>서비스 기본 이용 연령은 만 14세 이상으로 안내합니다. 만 14세 미만 사용자는 법정대리인 동의 절차가 필요하며, 실제 연령 인증은 아직 mock 상태입니다.</p>
+            <p>서비스 기본 이용 연령은 만 14세 이상으로 안내합니다. 만 14세 미만 사용자는 법정대리인 동의 절차가 필요하며, 실제 연령 인증 절차는 아직 제공하지 않습니다.</p>
             <p>주민등록번호, 계좌번호, 신분증, 건강·의료 정보, 상세 주소, 타인의 연락처, 미성년자 개인정보는 업로드하지 않도록 안내합니다.</p>
             <p>현재 자동 탐지 기능은 제공하지 않으며, 민감정보 방지 문구는 사용자가 업로드 전 확인하는 안내 수준입니다.</p>
           </div>

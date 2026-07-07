@@ -1,5 +1,5 @@
 import type { AccountDataExport } from "@/types";
-import type { DataRepository, RepositoryImportMode, RepositoryResult } from "@/lib/data/types";
+import type { DataRepository, RepositoryResult } from "@/lib/data/types";
 
 function unavailable(): RepositoryResult {
   return {
@@ -45,7 +45,7 @@ export const cloudRepository: DataRepository = {
       data: {}
     };
   },
-  importData(_exportData: AccountDataExport, _mode: RepositoryImportMode) {
+  importData() {
     return { ok: false, error: "CloudRepository 가져오기는 아직 구현되지 않았어요." };
   },
   migrate: unavailable

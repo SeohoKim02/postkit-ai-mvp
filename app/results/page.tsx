@@ -13,7 +13,7 @@ import { Button, LinkButton } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { generateUploadPackageWithAi } from "@/lib/ai/client";
 import { createAiRequestId, createGenerationIdempotencyKey } from "@/lib/ai/validation";
-import { styles } from "@/lib/constants";
+import { getPurposeLabel, styles } from "@/lib/constants";
 import { downloadJsonFile } from "@/lib/downloadUtils";
 import { getPlatformContentGuide } from "@/lib/platformGuidance";
 import {
@@ -111,8 +111,7 @@ function composePackage(result: GeneratedPackage) {
     ...sectionLines(guide.ctaTitle, result.ctas),
     ...sectionLines(guide.hookTitle, result.hooks),
     ...sectionLines(guide.thumbnailTitle, result.thumbnails),
-    ...sectionLines("광고/협찬 표시 문구", [result.disclosure]),
-    ...sectionLines("업로드 전 체크리스트", result.checklist)
+    ...sectionLines("광고/협찬 표시 문구", [result.disclosure])
   ].join("\n");
 }
 
@@ -376,7 +375,7 @@ export default function ResultsPage() {
     { label: "플랫폼", value: result.platform },
     { label: "권장 비율", value: platformGuide.recommendedRatio },
     { label: "결과 형식", value: platformGuide.resultFormat },
-    { label: "목적", value: result.purpose },
+    { label: "목적", value: getPurposeLabel(result.purpose) },
     { label: "사용 크레딧", value: `${result.usedCredits} 크레딧` }
   ];
 
@@ -634,7 +633,7 @@ export default function ResultsPage() {
 
           <Card>
             <h2 className="break-keep text-lg font-black">내보내기</h2>
-            <p className="mt-1 break-keep text-sm leading-6 text-muted">JSON 파일은 mock 저장용으로만 내려받습니다.</p>
+            <p className="mt-1 break-keep text-sm leading-6 text-muted">JSON 파일은 생성 결과를 백업해 두고 싶을 때 내려받습니다.</p>
             <div className="mt-4 grid min-w-0 grid-cols-1 gap-2 min-[430px]:grid-cols-2 sm:flex sm:flex-wrap sm:[&>*]:w-auto [&>*]:w-full">
               <Button onClick={handleDownload} type="button" variant="secondary">
                 <Download size={17} aria-hidden="true" />
