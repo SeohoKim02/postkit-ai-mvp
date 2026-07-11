@@ -101,11 +101,11 @@ export const designTemplates: DesignTemplate[] = [
     textPosition: "bottom",
     textAlignment: "left",
     overlayStyle: "gradient-bottom",
-    fontScale: 1,
+    fontScale: 0.86,
     padding: 0.07,
-    titleMaxLines: 3,
-    showBrandName: true,
-    showDisclosure: true,
+    titleMaxLines: 2,
+    showBrandName: false,
+    showDisclosure: false,
     defaultAspectRatio: "4:5"
   },
   {
@@ -113,26 +113,26 @@ export const designTemplates: DesignTemplate[] = [
     name: "아래쪽 제목",
     category: "기본",
     textPosition: "bottom",
-    textAlignment: "center",
-    overlayStyle: "blur-card",
-    fontScale: 1.05,
+    textAlignment: "left",
+    overlayStyle: "gradient-bottom",
+    fontScale: 0.84,
     padding: 0.075,
     titleMaxLines: 2,
     showBrandName: false,
-    showDisclosure: true,
+    showDisclosure: false,
     defaultAspectRatio: "1:1"
   },
   {
     id: "center-copy",
     name: "중앙 문구",
     category: "후킹",
-    textPosition: "center",
-    textAlignment: "center",
-    overlayStyle: "soft-dark",
-    fontScale: 1.18,
-    padding: 0.08,
-    titleMaxLines: 3,
-    showBrandName: true,
+    textPosition: "bottom",
+    textAlignment: "left",
+    overlayStyle: "gradient-bottom",
+    fontScale: 0.88,
+    padding: 0.075,
+    titleMaxLines: 2,
+    showBrandName: false,
     showDisclosure: false,
     defaultAspectRatio: "9:16"
   },
@@ -140,14 +140,14 @@ export const designTemplates: DesignTemplate[] = [
     id: "left-info",
     name: "좌측 정렬 정보형",
     category: "정보형",
-    textPosition: "left",
+    textPosition: "bottom",
     textAlignment: "left",
-    overlayStyle: "brand-panel",
-    fontScale: 0.92,
-    padding: 0.065,
-    titleMaxLines: 4,
-    showBrandName: true,
-    showDisclosure: true,
+    overlayStyle: "gradient-bottom",
+    fontScale: 0.82,
+    padding: 0.07,
+    titleMaxLines: 2,
+    showBrandName: false,
+    showDisclosure: false,
     defaultAspectRatio: "4:5"
   },
   {
@@ -156,12 +156,12 @@ export const designTemplates: DesignTemplate[] = [
     category: "판매",
     textPosition: "bottom",
     textAlignment: "left",
-    overlayStyle: "brand-panel",
-    fontScale: 1,
+    overlayStyle: "gradient-bottom",
+    fontScale: 0.86,
     padding: 0.07,
-    titleMaxLines: 3,
-    showBrandName: true,
-    showDisclosure: true,
+    titleMaxLines: 2,
+    showBrandName: false,
+    showDisclosure: false,
     defaultAspectRatio: "4:5"
   },
   {
@@ -170,39 +170,39 @@ export const designTemplates: DesignTemplate[] = [
     category: "후기",
     textPosition: "bottom",
     textAlignment: "left",
-    overlayStyle: "soft-light",
-    fontScale: 0.95,
+    overlayStyle: "gradient-bottom",
+    fontScale: 0.82,
     padding: 0.07,
-    titleMaxLines: 3,
+    titleMaxLines: 2,
     showBrandName: false,
-    showDisclosure: true,
+    showDisclosure: false,
     defaultAspectRatio: "1:1"
   },
   {
     id: "discount-event",
     name: "할인 이벤트형",
     category: "이벤트",
-    textPosition: "center",
-    textAlignment: "center",
-    overlayStyle: "soft-dark",
-    fontScale: 1.22,
+    textPosition: "bottom",
+    textAlignment: "left",
+    overlayStyle: "gradient-bottom",
+    fontScale: 0.88,
     padding: 0.075,
-    titleMaxLines: 3,
-    showBrandName: true,
-    showDisclosure: true,
+    titleMaxLines: 2,
+    showBrandName: false,
+    showDisclosure: false,
     defaultAspectRatio: "9:16"
   },
   {
     id: "new-arrival",
     name: "신상품 출시형",
     category: "런칭",
-    textPosition: "top",
+    textPosition: "bottom",
     textAlignment: "left",
     overlayStyle: "gradient-bottom",
-    fontScale: 1.08,
+    fontScale: 0.86,
     padding: 0.075,
-    titleMaxLines: 3,
-    showBrandName: true,
+    titleMaxLines: 2,
+    showBrandName: false,
     showDisclosure: false,
     defaultAspectRatio: "9:16"
   },
@@ -211,26 +211,26 @@ export const designTemplates: DesignTemplate[] = [
     name: "고급 브랜드형",
     category: "브랜드",
     textPosition: "bottom",
-    textAlignment: "center",
-    overlayStyle: "soft-dark",
-    fontScale: 0.95,
-    padding: 0.09,
+    textAlignment: "left",
+    overlayStyle: "gradient-bottom",
+    fontScale: 0.84,
+    padding: 0.075,
     titleMaxLines: 2,
-    showBrandName: true,
-    showDisclosure: true,
+    showBrandName: false,
+    showDisclosure: false,
     defaultAspectRatio: "4:5"
   },
   {
     id: "minimal",
     name: "미니멀형",
     category: "브랜드",
-    textPosition: "center",
-    textAlignment: "center",
-    overlayStyle: "none",
-    fontScale: 0.9,
-    padding: 0.1,
+    textPosition: "bottom",
+    textAlignment: "left",
+    overlayStyle: "gradient-bottom",
+    fontScale: 0.8,
+    padding: 0.075,
     titleMaxLines: 2,
-    showBrandName: true,
+    showBrandName: false,
     showDisclosure: false,
     defaultAspectRatio: "1:1"
   }
@@ -270,14 +270,14 @@ export function recommendDesignTemplate(result: GeneratedPackage, personalizatio
   if (result.purpose === "Discount Event") {
     return {
       template: getDesignTemplate("discount-event"),
-      reason: "할인 이벤트 목적에 맞춰 강한 중앙 카피 템플릿을 추천했어요."
+      reason: "할인 이벤트 목적에 맞춰 사진을 살리는 짧은 하단 카피 템플릿을 추천했어요."
     };
   }
 
   if (result.purpose === "New Arrival") {
     return {
       template: getDesignTemplate("new-arrival"),
-      reason: "신상품 출시 느낌이 보이도록 상단 정보형 템플릿을 추천했어요."
+      reason: "신상품 출시 느낌을 사진 위 짧은 하단 문구로 정리하는 템플릿을 추천했어요."
     };
   }
 
@@ -291,7 +291,7 @@ export function recommendDesignTemplate(result: GeneratedPackage, personalizatio
   if (result.purpose === "Product Promotion") {
     return {
       template: getDesignTemplate("product-promo"),
-      reason: "제품명과 CTA가 잘 보이는 제품 홍보형 템플릿을 추천했어요."
+      reason: "제품 사진을 가리지 않고 제품명과 CTA만 짧게 얹는 템플릿을 추천했어요."
     };
   }
 

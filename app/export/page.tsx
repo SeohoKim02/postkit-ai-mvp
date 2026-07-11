@@ -345,6 +345,16 @@ export default function ExportPage() {
           };
         }
 
+        // Studio와 같은 기준: 치명적 품질 문제(사진 유실·피사체 겹침 등)는 어디서 받아도 차단한다.
+        const fatal = (rendered.info?.quality ?? []).filter((issue) => issue.severity === "error");
+        if (fatal.length > 0) {
+          return {
+            ok: false,
+            fileName: asset.fileName,
+            error: `다운로드를 중단했어요. ${fatal.map((issue) => issue.message).join(" ")} Studio에서 수정할 수 있어요.`
+          };
+        }
+
         const download = downloadBlob(rendered.blob, asset.fileName || makeDesignFileName(project));
 
         if (download.ok && latestDesign) {

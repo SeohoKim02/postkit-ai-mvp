@@ -15,6 +15,19 @@ export type WatermarkStatus = {
 type WatermarkPlacement = {
   bottomSafeRatio?: number;
   rightSafeRatio?: number;
+  side?: "left" | "right";
+  // 배경 밝기에 따른 글자색: light(어두운 배경 → 흰색) / dark(밝은 배경 → 짙은 회색)
+  tone?: "light" | "dark";
+};
+
+export type WatermarkSpec = {
+  text: string;
+  fontSize: number;
+  opacity: number;
+  maxWidthRatio: number;
+  marginX: number;
+  marginY: number;
+  hasBackgroundCard: boolean;
 };
 
 // 무료 공개 베타 정책: 서버 인증·결제로 유료 자격을 검증할 수 없으므로
@@ -38,19 +51,22 @@ export function getPostKitWatermarkStatus(account?: Pick<CreditAccount, "current
   };
 }
 
-function drawRoundedRect(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
-  const r = Math.min(radius, width / 2, height / 2);
-  context.beginPath();
-  context.moveTo(x + r, y);
-  context.lineTo(x + width - r, y);
-  context.quadraticCurveTo(x + width, y, x + width, y + r);
-  context.lineTo(x + width, y + height - r);
-  context.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
-  context.lineTo(x + r, y + height);
-  context.quadraticCurveTo(x, y + height, x, y + height - r);
-  context.lineTo(x, y + r);
-  context.quadraticCurveTo(x, y, x + r, y);
-  context.closePath();
+// 워터마크는 본문보다 덜 눈에 띄는 작은 평문이어야 한다: 배경 카드 없음,
+// 캔버스 너비의 16% 이내, 절제된 불투명도(0.42~0.58 범위).
+// 크기는 Feed 약 16~20px, Story 약 18~22px. 가장자리 여백은 32~44px.
+export function getPostKitWatermarkSpec(width: number, height: number): WatermarkSpec {
+  const story = height / width >= 1.6;
+  const fontSize = Math.round(clamp(width * (story ? 0.0175 : 0.016), story ? 18 : 16, story ? 22 : 20));
+
+  return {
+    text: POSTKIT_WATERMARK_TEXT,
+    fontSize,
+    opacity: 0.52,
+    maxWidthRatio: 0.16,
+    marginX: Math.round(clamp(width * 0.034, 32, 44)),
+    marginY: Math.round(clamp(height * 0.028, 32, 44)),
+    hasBackgroundCard: false
+  };
 }
 
 export function drawPostKitWatermark(
@@ -64,32 +80,39 @@ export function drawPostKitWatermark(
     return;
   }
 
-  const fontSize = Math.round(clamp(Math.min(width, height) * 0.025, 12, 30));
-  const paddingX = Math.round(fontSize * 0.78);
-  const paddingY = Math.round(fontSize * 0.48);
-  const boxRadius = Math.round(fontSize * 0.52);
-  const bottomMargin = Math.max(Math.round(height * (placement.bottomSafeRatio ?? 0.045)), Math.round(fontSize * 1.75));
-  const rightMargin = Math.max(Math.round(width * (placement.rightSafeRatio ?? 0.045)), Math.round(fontSize * 1.45));
+  const spec = getPostKitWatermarkSpec(width, height);
+  const side = placement.side ?? "right";
+  const bottomMargin = Math.max(spec.marginY, Math.round(height * (placement.bottomSafeRatio ?? 0)));
+  const sideMargin = Math.max(spec.marginX, Math.round(width * (placement.rightSafeRatio ?? 0)));
 
   context.save();
-  context.font = `800 ${fontSize}px Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
-  context.textBaseline = "middle";
-  context.textAlign = "left";
 
-  const textWidth = context.measureText(status.text).width;
-  const boxWidth = Math.round(textWidth + paddingX * 2);
-  const boxHeight = Math.round(fontSize + paddingY * 2);
-  const x = Math.max(Math.round(width * 0.03), width - rightMargin - boxWidth);
-  const y = Math.max(Math.round(height * 0.03), height - bottomMargin - boxHeight);
+  let fontSize = spec.fontSize;
+  const wmFont = (size: number) => `600 ${size}px Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+  context.font = wmFont(fontSize);
+  while (context.measureText(spec.text).width > width * spec.maxWidthRatio && fontSize > 12) {
+    fontSize -= 1;
+    context.font = wmFont(fontSize);
+  }
 
-  drawRoundedRect(context, x, y, boxWidth, boxHeight, boxRadius);
-  context.fillStyle = "rgba(0, 0, 0, 0.34)";
-  context.fill();
-  context.strokeStyle = "rgba(255, 255, 255, 0.2)";
-  context.lineWidth = Math.max(1, Math.round(fontSize * 0.06));
-  context.stroke();
+  context.textBaseline = "alphabetic";
+  context.textAlign = side === "right" ? "right" : "left";
+  const x = side === "right" ? width - sideMargin : sideMargin;
+  const y = height - bottomMargin;
 
-  context.fillStyle = "rgba(255, 255, 255, 0.82)";
-  context.fillText(status.text, x + paddingX, y + boxHeight / 2);
+  // 그림자는 1px 수준으로만: 흰 글자엔 어두운 그림자, 짙은 글자엔 밝은 그림자.
+  const tone = placement.tone ?? "light";
+  if (tone === "dark") {
+    context.shadowColor = "rgba(255,255,255,0.4)";
+    context.shadowBlur = 1;
+    context.shadowOffsetY = 0;
+    context.fillStyle = `rgba(45,49,58,${spec.opacity + 0.04})`;
+  } else {
+    context.shadowColor = "rgba(0,0,0,0.42)";
+    context.shadowBlur = 1;
+    context.shadowOffsetY = 1;
+    context.fillStyle = `rgba(255,255,255,${spec.opacity})`;
+  }
+  context.fillText(spec.text, x, y);
   context.restore();
 }

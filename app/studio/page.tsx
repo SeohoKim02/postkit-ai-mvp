@@ -11,7 +11,8 @@ import {
   Save,
   Share2,
   ShieldCheck,
-  Sparkles
+  Sparkles,
+  Wand2
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
@@ -24,7 +25,8 @@ import { Card } from "@/components/ui/Card";
 import { linkCampaignContent } from "@/lib/campaignStorage";
 import { getPurposeLabel } from "@/lib/constants";
 import { linkScheduleContent } from "@/lib/calendarStorage";
-import { drawDesignToCanvas, renderDesignToBlob } from "@/lib/canvasRenderer";
+import { drawDesignToCanvas, nextRecommendedPlacement, renderDesignToBlob } from "@/lib/canvasRenderer";
+import type { DesignRenderInfo } from "@/lib/canvasRenderer";
 import { designOutputPresets, designTemplates, getDesignOutputPreset, recommendDesignTemplate } from "@/lib/designTemplates";
 import {
   createDefaultDesignProject,
@@ -32,6 +34,7 @@ import {
   getLatestDesignForContent,
   makeDesignFileName,
   markDesignDownloaded,
+  resolveInitialOutputPresetId,
   saveDesignPreferences,
   upsertDesignProject
 } from "@/lib/designStorage";
@@ -53,18 +56,22 @@ import { getPostKitWatermarkStatus } from "@/lib/watermarkPolicy";
 import type {
   CanvasImageSettings,
   CanvasTextElement,
+  DesignContentCategory,
   DesignProject,
   DesignTextAlignment,
-  DesignTextPosition,
+  DesignTextAnchorX,
+  DesignTextSizePreset,
+  DesignWatermarkPosition,
   GeneratedPackage
 } from "@/types";
 
-const textPositions: Array<{ value: DesignTextPosition; label: string }> = [
-  { value: "top", label: "상단" },
-  { value: "center", label: "중앙" },
-  { value: "bottom", label: "하단" },
-  { value: "left", label: "좌측" },
-  { value: "right", label: "우측" }
+// 자동 배치가 못 미더울 때 사용자가 바로 고를 수 있는 네 모서리 위치.
+const textPlacements: Array<{ value: string; label: string }> = [
+  { value: "auto", label: "자동 (사진 분석)" },
+  { value: "top-left", label: "좌측 상단" },
+  { value: "top-right", label: "우측 상단" },
+  { value: "bottom-left", label: "좌측 하단" },
+  { value: "bottom-right", label: "우측 하단" }
 ];
 
 const textAlignments: Array<{ value: DesignTextAlignment; label: string }> = [
@@ -72,6 +79,33 @@ const textAlignments: Array<{ value: DesignTextAlignment; label: string }> = [
   { value: "center", label: "가운데" },
   { value: "right", label: "오른쪽" }
 ];
+
+const textSizePresets: Array<{ value: DesignTextSizePreset; label: string }> = [
+  { value: "small", label: "작게" },
+  { value: "medium", label: "보통" },
+  { value: "large", label: "크게" }
+];
+
+const watermarkPositions: Array<{ value: DesignWatermarkPosition; label: string }> = [
+  { value: "auto", label: "자동 (텍스트 반대쪽)" },
+  { value: "bottom-left", label: "좌측 하단" },
+  { value: "bottom-right", label: "우측 하단" }
+];
+
+// 카테고리별 배치·타이포 규칙: 패션은 절제형, 음식·카페는 조금 더 또렷한 제목을 허용한다.
+const contentCategories: Array<{ value: DesignContentCategory; label: string }> = [
+  { value: "auto", label: "자동 분류" },
+  { value: "fashion", label: "패션" },
+  { value: "food", label: "음식·카페" },
+  { value: "general", label: "일반 제품" }
+];
+
+const placementLabels: Record<string, string> = {
+  "top-left": "좌측 상단",
+  "top-right": "우측 상단",
+  "bottom-left": "좌측 하단",
+  "bottom-right": "우측 하단"
+};
 
 const feedSet = ["instagram-feed-vertical", "instagram-story", "instagram-reels-thumbnail"];
 const shortSet = ["tiktok", "youtube-shorts"];
@@ -119,8 +153,14 @@ export default function StudioPage() {
   const [project, setProject] = useState<DesignProject | null>(null);
   const [feedback, setFeedback] = useState("");
   const [error, setError] = useState("");
+  const [placementNote, setPlacementNote] = useState("");
   const [isRendering, setIsRendering] = useState(false);
   const [isWorking, setIsWorking] = useState(false);
+  const [renderInfo, setRenderInfo] = useState<DesignRenderInfo | null>(null);
+  // 다운로드 검사에서 위치 문제(피사체 겹침)가 원인일 때, 오류 안내 안에 바로 "다른 위치 추천" 버튼을 보여준다.
+  const [errorSuggestsPlacement, setErrorSuggestsPlacement] = useState(false);
+  // 다운로드 전 검사에서 경고가 나오면 true로 바꾸고, 사용자가 한 번 더 누르면 그대로 진행한다.
+  const warningAckRef = useRef(false);
   const watermarkStatus = useMemo(() => getPostKitWatermarkStatus(), []);
 
   useEffect(() => {
@@ -136,7 +176,8 @@ export default function StudioPage() {
     }
 
     const saved = getLatestDesignForContent(current.id);
-    const preferredOutput = current.scheduleId ? undefined : preferences.lastOutputPresetId;
+    // 이번 결과의 플랫폼이 우선. 이전 세션의 다른 플랫폼 프리셋(예: Story 결과에 Feed 4:5)이 남지 않게 한다.
+    const preferredOutput = current.scheduleId ? undefined : resolveInitialOutputPresetId(current, preferences.lastOutputPresetId);
     const initial = saved ?? createDefaultDesignProject(current, brand, personalization, preferredOutput);
     const withPreferences = saved
       ? saved
@@ -158,7 +199,17 @@ export default function StudioPage() {
       try {
         setIsRendering(true);
         setError("");
-        await drawDesignToCanvas(canvasRef.current as HTMLCanvasElement, project);
+        const info = await drawDesignToCanvas(canvasRef.current as HTMLCanvasElement, project);
+        if (active) {
+          setRenderInfo(info);
+          setPlacementNote(
+            info.photoMissing
+              ? "제품 사진이 사라져 복구 안내 화면이 표시되고 있어요. 사진을 다시 업로드하면 사진 기반 디자인으로 돌아갑니다."
+              : info.autoPlacement && info.placementUncertain
+                ? "자동 배치가 피사체와 겹칠 수 있어요. 다른 위치 추천 버튼이나 텍스트 위치에서 모서리를 직접 선택해 보세요."
+                : ""
+          );
+        }
       } catch (renderError) {
         if (active) {
           setError(renderError instanceof Error ? renderError.message : "미리보기를 그리지 못했어요.");
@@ -206,7 +257,10 @@ export default function StudioPage() {
         lastUpdatedAt: new Date().toISOString()
       };
     });
+    // 디자인이 바뀌면 이전 경고 확인 상태는 무효가 된다.
+    warningAckRef.current = false;
     setError("");
+    setErrorSuggestsPlacement(false);
   }
 
   function updateImageSettings<K extends keyof CanvasImageSettings>(key: K, value: CanvasImageSettings[K]) {
@@ -236,6 +290,7 @@ export default function StudioPage() {
       templateId: template.id,
       textPosition: template.textPosition,
       textAlignment: template.textAlignment,
+      textPlacementMode: "auto",
       fontScale: template.fontScale,
       showBrandName: template.showBrandName,
       showDisclosure: template.showDisclosure
@@ -287,6 +342,42 @@ export default function StudioPage() {
     }
   }
 
+  // "다른 위치 추천": 사진 분석이 매긴 코너 안전 순위에서 다음 후보로 이동한다.
+  // 수동 위치 상태에서 누르면 자동 추천 후보로 전환된다는 것을 안내 문구로 알린다.
+  function handleSuggestPlacement() {
+    if (!project) return;
+    const ranked = renderInfo?.rankedPlacements ?? [];
+    const current = renderInfo ? renderInfo.placement : null;
+    const next = nextRecommendedPlacement(ranked, current);
+    if (!next) {
+      flash("미리보기 분석이 아직 준비되지 않았어요. 잠시 후 다시 시도해주세요.");
+      return;
+    }
+
+    // 추천할 만한 다른 자리가 없어 현재 위치가 유일한 후보인 경우: 더 나쁜 자리로 옮기는 대신 정직하게 알린다.
+    if (current && current.position === next.position && current.anchorX === next.anchorX) {
+      flash("지금 위치가 분석상 가장 안전한 자리예요. 문구를 줄이거나 확대를 낮추면 다른 위치도 추천할 수 있어요.");
+      return;
+    }
+
+    const wasManual = project.textPlacementMode === "manual";
+    updateProject((current) => ({
+      ...current,
+      textPlacementMode: "manual",
+      textPosition: next.position,
+      textAnchorX: next.anchorX,
+      textAlignment: next.anchorX === "right" ? "right" : "left"
+    }));
+
+    const rankIndex = ranked.findIndex((item) => item.position === next.position && item.anchorX === next.anchorX) + 1;
+    const label = placementLabels[`${next.position}-${next.anchorX}`] ?? "다음 후보";
+    flash(
+      wasManual
+        ? `자동 추천 후보로 전환해 ${rankIndex}순위 위치(${label})로 이동했어요.`
+        : `사진 분석 ${rankIndex}순위 위치(${label})로 이동했어요.`
+    );
+  }
+
   async function handleDownload(downloadProject = project) {
     if (!downloadProject || isWorking) return;
 
@@ -298,11 +389,33 @@ export default function StudioPage() {
         return;
       }
 
+      // 다운로드 전 품질 검사: 치명적 문제는 차단, 경고는 한 번 더 누르면 진행.
+      const issues = rendered.info?.quality ?? [];
+      const overlapIssue = issues.some((issue) => issue.code === "subject-overlap-high" || issue.code === "subject-overlap");
+      const fatal = issues.filter((issue) => issue.severity === "error");
+      if (fatal.length > 0) {
+        setError(fatal.map((issue) => issue.message).join(" "));
+        setErrorSuggestsPlacement(overlapIssue);
+        return;
+      }
+      const warnings = issues.filter((issue) => issue.severity === "warning");
+      if (warnings.length > 0 && !warningAckRef.current) {
+        warningAckRef.current = true;
+        setError(
+          `아직 저장되지 않았어요. ${warnings.map((issue) => issue.message).join(" ")} 그대로 진행하려면 PNG 다운로드를 한 번 더 눌러주세요.`
+        );
+        setErrorSuggestsPlacement(overlapIssue);
+        return;
+      }
+      warningAckRef.current = false;
+
       const fileName = makeDesignFileName(downloadProject);
       const download = downloadBlob(rendered.blob, fileName);
       if (download.ok) {
         const saved = persistProject({ ...downloadProject, downloaded: true });
         if (saved) markDesignDownloaded(saved.id);
+        setError("");
+        setErrorSuggestsPlacement(false);
         flash(`${fileName} 다운로드를 시작했어요.`);
       } else {
         setError(download.error ?? "PNG 다운로드를 시작하지 못했어요.");
@@ -326,6 +439,11 @@ export default function StudioPage() {
         const rendered = await renderDesignToBlob(nextProject);
         if (!rendered.ok || !rendered.blob) {
           throw new Error(rendered.error ?? "PNG를 생성하지 못했어요.");
+        }
+
+        const fatal = (rendered.info?.quality ?? []).filter((issue) => issue.severity === "error");
+        if (fatal.length > 0) {
+          throw new Error(`${getDesignOutputPreset(outputId).name} 검사 실패: ${fatal.map((issue) => issue.message).join(" ")}`);
         }
 
         const fileName = makeDesignFileName(nextProject);
@@ -390,7 +508,8 @@ export default function StudioPage() {
     <AppShell>
       <PageHeader
         action={
-          <>
+          // 모바일에서는 하단 고정 바(저장/PNG/내보내기)가 같은 액션을 제공하므로 헤더 버튼은 데스크톱에서만 보여준다.
+          <div className="hidden flex-wrap justify-end gap-2 lg:flex">
             <Button disabled={isWorking} onClick={handleSave} type="button" variant="secondary">
               <Save size={17} aria-hidden="true" />
               디자인 저장
@@ -403,7 +522,7 @@ export default function StudioPage() {
               <Share2 size={17} aria-hidden="true" />
               내보내기 센터
             </Button>
-          </>
+          </div>
         }
         description={`${result.platform} · ${getPurposeLabel(result.purpose)} · Canvas 기반 PNG · 추가 크레딧 0`}
         eyebrow="PostKit Studio"
@@ -418,9 +537,19 @@ export default function StudioPage() {
       ) : null}
 
       {error ? (
-        <div className="mt-5 flex items-start gap-2 rounded-lg border border-coral/30 bg-coral/10 p-3 text-sm font-bold leading-6 text-coral">
-          <AlertCircle className="mt-0.5 shrink-0" size={18} aria-hidden="true" />
-          {error}
+        <div className="mt-5 rounded-lg border border-coral/30 bg-coral/10 p-3 text-sm font-bold leading-6 text-coral">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="mt-0.5 shrink-0" size={18} aria-hidden="true" />
+            {error}
+          </div>
+          {errorSuggestsPlacement ? (
+            <div className="mt-2 pl-6">
+              <Button disabled={isWorking} onClick={handleSuggestPlacement} type="button" variant="secondary">
+                <Wand2 size={15} aria-hidden="true" />
+                다른 위치 추천받기
+              </Button>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -481,9 +610,19 @@ export default function StudioPage() {
                   type="file"
                 />
               </label>
-              <div className="rounded-lg border border-line bg-wash p-3 text-sm leading-6 text-muted">
-                {imageAvailable ? "현재 브라우저 세션의 업로드 이미지를 합성합니다." : "업로드 이미지가 없거나 새로고침 후 세션 이미지가 사라져 PostKit 기본 이미지를 fallback으로 사용합니다."}
-              </div>
+              {imageAvailable ? (
+                <div className="rounded-lg border border-line bg-wash p-3 text-sm leading-6 text-muted">
+                  현재 브라우저 세션의 업로드 이미지를 합성합니다.
+                </div>
+              ) : project.uploadedAssetId ? (
+                <div className="rounded-lg border border-coral/30 bg-coral/10 p-3 text-sm font-bold leading-6 text-coral">
+                  제품 사진이 새로고침 등으로 세션에서 사라졌어요. 같은 사진을 다시 업로드해주세요. 복구 전에는 PNG 저장이 차단됩니다.
+                </div>
+              ) : (
+                <div className="rounded-lg border border-line bg-wash p-3 text-sm leading-6 text-muted">
+                  업로드 이미지가 없어 PostKit 기본 배경을 사용합니다. 제품 사진을 업로드하면 사진 기반 디자인으로 만들어져요.
+                </div>
+              )}
               <div>
                 <span className="field-label">템플릿 선택</span>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -629,9 +768,62 @@ export default function StudioPage() {
             <h2 className="text-lg font-black">5. 레이아웃 옵션</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <label>
+                <span className="field-label">콘텐츠 카테고리</span>
+                <select
+                  className="field"
+                  onChange={(event) =>
+                    updateProject((current) => ({
+                      ...current,
+                      contentCategory: event.target.value as DesignContentCategory
+                    }))
+                  }
+                  value={project.contentCategory ?? "auto"}
+                >
+                  {contentCategories.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+                {(project.contentCategory ?? "auto") === "auto" && renderInfo ? (
+                  <p className="mt-1 text-xs font-bold leading-5 text-muted">
+                    현재 자동 분류: {contentCategories.find((item) => item.value === renderInfo.category)?.label ?? "일반 제품"}
+                  </p>
+                ) : null}
+              </label>
+              <div>
+                <span className="field-label">다른 위치 추천</span>
+                <Button className="w-full" disabled={isWorking} onClick={handleSuggestPlacement} type="button" variant="secondary">
+                  <Wand2 size={16} aria-hidden="true" />
+                  다른 위치 추천
+                </Button>
+                <p className="mt-1 text-xs font-bold leading-5 text-muted">사진 분석 순위에 따라 다음으로 안전한 모서리로 이동해요.</p>
+              </div>
+              <label>
                 <span className="field-label">텍스트 위치</span>
-                <select className="field" onChange={(event) => updateProject((current) => ({ ...current, textPosition: event.target.value as DesignTextPosition }))} value={project.textPosition}>
-                  {textPositions.map((item) => (
+                <select
+                  className="field"
+                  onChange={(event) =>
+                    updateProject((current) => {
+                      if (event.target.value === "auto") {
+                        return { ...current, textPlacementMode: "auto" };
+                      }
+                      const [vertical, horizontal] = event.target.value.split("-");
+                      return {
+                        ...current,
+                        textPlacementMode: "manual",
+                        textPosition: vertical === "top" ? "top" : "bottom",
+                        textAnchorX: (horizontal === "right" ? "right" : "left") as DesignTextAnchorX
+                      };
+                    })
+                  }
+                  value={
+                    project.textPlacementMode === "manual"
+                      ? `${project.textPosition === "top" ? "top" : "bottom"}-${project.textAnchorX === "right" ? "right" : "left"}`
+                      : "auto"
+                  }
+                >
+                  {textPlacements.map((item) => (
                     <option key={item.value} value={item.value}>
                       {item.label}
                     </option>
@@ -640,7 +832,17 @@ export default function StudioPage() {
               </label>
               <label>
                 <span className="field-label">텍스트 정렬</span>
-                <select className="field" onChange={(event) => updateProject((current) => ({ ...current, textAlignment: event.target.value as DesignTextAlignment }))} value={project.textAlignment}>
+                <select
+                  className="field"
+                  onChange={(event) =>
+                    updateProject((current) => ({
+                      ...current,
+                      textAlignment: event.target.value as DesignTextAlignment,
+                      textPlacementMode: "manual"
+                    }))
+                  }
+                  value={project.textAlignment}
+                >
                   {textAlignments.map((item) => (
                     <option key={item.value} value={item.value}>
                       {item.label}
@@ -648,17 +850,43 @@ export default function StudioPage() {
                   ))}
                 </select>
               </label>
-              <label className="sm:col-span-2">
-                <span className="field-label">글자 크기</span>
-                <input
-                  className="w-full accent-coral"
-                  max="1.28"
-                  min="0.78"
-                  onChange={(event) => updateProject((current) => ({ ...current, fontScale: clampSlider(Number(event.target.value), 0.78, 1.28) }))}
-                  step="0.03"
-                  type="range"
-                  value={project.fontScale}
-                />
+              <div>
+                <span className="field-label">텍스트 크기</span>
+                <div className="grid grid-cols-3 gap-2">
+                  {textSizePresets.map((item) => (
+                    <button
+                      className={`min-h-11 rounded-lg border px-2 text-sm font-black transition ${
+                        (project.textSizePreset ?? "medium") === item.value
+                          ? "border-coral bg-blush text-coral"
+                          : "border-line bg-wash hover:border-coral/50"
+                      }`}
+                      key={item.value}
+                      onClick={() => updateProject((current) => ({ ...current, textSizePreset: item.value }))}
+                      type="button"
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <label>
+                <span className="field-label">워터마크 위치</span>
+                <select
+                  className="field"
+                  onChange={(event) =>
+                    updateProject((current) => ({
+                      ...current,
+                      watermarkPosition: event.target.value as DesignWatermarkPosition
+                    }))
+                  }
+                  value={project.watermarkPosition ?? "auto"}
+                >
+                  {watermarkPositions.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
               </label>
             </div>
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -699,7 +927,8 @@ export default function StudioPage() {
                 />
               </div>
             </div>
-            <div className="mt-4 grid min-w-0 grid-cols-1 gap-2 min-[430px]:grid-cols-3">
+            {/* 모바일에서는 하단 고정 액션 바가 같은 버튼을 제공하므로, 이 행은 고정 바가 사라지는 lg 이상에서만 보여 시선 흐름을 단순하게 유지한다. */}
+            <div className="mt-4 hidden min-w-0 grid-cols-3 gap-2 lg:grid">
               <Button disabled={isWorking} onClick={handleSave} type="button" variant="secondary">
                 <Save size={16} aria-hidden="true" />
                 저장
@@ -713,6 +942,9 @@ export default function StudioPage() {
                 내보내기
               </Button>
             </div>
+            {placementNote ? (
+              <p className="mt-3 rounded-lg border border-lemon/40 bg-lemon/10 px-3 py-2 text-xs font-bold leading-5 text-amber-700">{placementNote}</p>
+            ) : null}
             <p className="mt-3 rounded-lg bg-wash px-3 py-2 text-xs font-bold leading-5 text-muted">{watermarkStatus.message}</p>
           </Card>
 
@@ -753,7 +985,7 @@ export default function StudioPage() {
       </div>
 
       <div className="mobile-fixed-action fixed inset-x-0 bottom-[78px] z-10 border-t border-line bg-white/95 p-3 shadow-lift backdrop-blur lg:hidden">
-        <div className="mx-auto grid max-w-md grid-cols-2 gap-2 min-[430px]:grid-cols-3">
+        <div className="mx-auto grid max-w-md grid-cols-3 gap-2">
           <Button className="px-2 text-xs" disabled={isWorking} onClick={handleSave} type="button" variant="secondary">
             <Save size={15} aria-hidden="true" />
             저장

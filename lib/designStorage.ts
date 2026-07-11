@@ -1,6 +1,7 @@
 "use client";
 
-import { designTemplates, getDesignOutputPreset, getDesignTemplate, recommendDesignTemplate } from "@/lib/designTemplates";
+import { classifyDesignCategory, prepareCanvasImageText } from "@/lib/canvasRenderer";
+import { designOutputPresets, designTemplates, getDesignOutputPreset, getDesignTemplate, recommendDesignTemplate } from "@/lib/designTemplates";
 import { getSelectedCaption, sanitizeFilePart } from "@/lib/exportUtils";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
 import type {
@@ -48,17 +49,76 @@ function createId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function shortText(value: string, fallback: string) {
-  const cleaned = value.replace(/\s+/g, " ").trim();
-  if (!cleaned) {
-    return fallback;
-  }
+function normalizeImageText(value: string) {
+  return value
+    .replace(/#[^\s#]+/g, "")
+    .replace(/\s+/g, " ")
+    .replace(/[“”"]/g, "")
+    .trim();
+}
 
-  if (cleaned.length <= 54) {
+function trimText(value: string, maxLength: number) {
+  const cleaned = normalizeImageText(value);
+
+  if (cleaned.length <= maxLength) {
     return cleaned;
   }
 
-  return `${cleaned.slice(0, 52).trim()}...`;
+  const sentence = cleaned
+    .split(/(?<=[.!?。！？]|[요다죠까니다습니다])\s+/u)
+    .find((part) => part.length >= 6 && part.length <= maxLength);
+  if (sentence) {
+    return sentence.trim();
+  }
+
+  const words = cleaned.split(" ");
+  let current = "";
+  for (const word of words) {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length > maxLength) break;
+    current = next;
+  }
+
+  const trimmed = current || Array.from(cleaned).slice(0, maxLength).join("");
+  return trimmed.replace(/[,.!?;:，。！？、-]+$/u, "").trim();
+}
+
+function shortText(value: string, fallback: string, maxLength = 54) {
+  const cleaned = trimText(value, maxLength);
+  if (!cleaned) {
+    return trimText(fallback, maxLength);
+  }
+
+  return cleaned;
+}
+
+function keywordParts(value: string) {
+  return value
+    .split(/[,/·|]/)
+    .map((item) => normalizeImageText(item))
+    .filter(Boolean);
+}
+
+function conciseProductLine(result: GeneratedPackage) {
+  const product = normalizeImageText(result.input.productName || result.title);
+  const keyword = keywordParts(result.input.requiredKeywords || "")[0];
+
+  if (product && keyword) {
+    return `${product}, ${keyword}`;
+  }
+
+  return product || result.title;
+}
+
+function internalBrandName(value: string) {
+  return /^(postkit|postkit studio|sample brand)$/i.test(value.trim());
+}
+
+function imageBrandName(result: GeneratedPackage, brand: BrandProfile) {
+  const candidates = [result.input.brandName, result.brandName, brand.accountName]
+    .map((value) => normalizeImageText(value ?? ""))
+    .filter(Boolean);
+  return candidates.find((value) => !internalBrandName(value)) ?? "";
 }
 
 function snapshotBrand(brand: BrandProfile, primaryColor = "#ff6b4a", secondaryColor = "#edf9f6"): BrandStyleSnapshot {
@@ -81,14 +141,73 @@ function displayDisclosure(value: string) {
   return cleaned && cleaned !== "광고/협찬 표시 없음" ? cleaned : "";
 }
 
+// 긴 캡션에서 이미지 본문으로 쓸 만한 "제한 안에 완결되는 첫 문장"을 찾는다. 없으면 빈 문자열.
+// (문장 중간을 잘라 붙이면 어색해지므로, 통째로 들어가는 문장만 쓴다.)
+function firstCompleteSentenceWithin(value: string, maxLength: number) {
+  const cleaned = normalizeImageText(value);
+  const sentence = cleaned.split(/(?<=[.!?。！？])\s+/u)[0]?.trim() ?? "";
+  const length = Array.from(sentence).length;
+  return length >= 8 && length <= maxLength ? sentence : "";
+}
+
+// 제목과 같은 구절로 시작하는 본문은 제품명이 두 번 반복돼 보인다("프리미엄 린넨 셔츠" / "프리미엄 린넨 셔츠, ...").
+// 남는 구절이 본문으로 쓸 만큼 길 때만 제목 구절을 떼어낸다.
+function stripTitleEcho(subtitle: string, title: string) {
+  if (!title || !subtitle.startsWith(title)) return subtitle;
+  const rest = subtitle.slice(title.length).replace(/^[\s,·:;–-]+/u, "").trim();
+  return Array.from(rest).length >= 8 ? rest : subtitle;
+}
+
+// 이미지 기본 카피의 카테고리별 톤:
+// 패션은 후킹 문장("여름 출근룩을 가볍게")보다 상품명·컬렉션형 제목("시원한 프리미엄 린넨 셔츠 컬렉션")을,
+// 음식·카페와 일반 제품은 기존 훅/썸네일 우선(메뉴 소개형)을 유지한다.
+export function pickImageTextSources(input: {
+  productName: string;
+  productLine: string;
+  thumbnail?: string;
+  hook?: string;
+  caption?: string;
+}): { titleSource: string; subtitleSource: string } {
+  const thumbnail = normalizeImageText(input.thumbnail ?? "");
+  const hook = normalizeImageText(input.hook ?? "");
+  const caption = input.caption ?? "";
+  const productName = normalizeImageText(input.productName);
+  const category = classifyDesignCategory([input.productLine, thumbnail, hook].filter(Boolean).join(" "));
+
+  if (category === "fashion" && productName) {
+    // 제품명이 들어간 후보(상품 홍보형)를 우선하고, 없으면 제품명 자체를 제목으로 쓴다.
+    const titleSource = [thumbnail, hook].find((candidate) => candidate.includes(productName)) ?? productName;
+    // 본문은 활용법을 설명하는 문장형 카피를 우선한다("출근룩부터 휴가까지 활용할 수 있습니다" 방향).
+    // 단, 캡션은 38자 안에 통째로 끝나는 첫 문장일 때만 쓰고, 아니면 훅으로 넘어간다.
+    const captionSentence = firstCompleteSentenceWithin(caption, 38);
+    const subtitleSource = [captionSentence, hook, thumbnail].find((candidate) => candidate && candidate !== titleSource) ?? input.productLine;
+    return { titleSource, subtitleSource: stripTitleEcho(normalizeImageText(subtitleSource), titleSource) };
+  }
+
+  const titleSource = thumbnail || hook || input.productLine;
+  const subtitleSource = thumbnail ? hook || input.productLine : hook ? input.productLine : caption;
+  return { titleSource, subtitleSource };
+}
+
 function makeText(result: GeneratedPackage, brand: BrandProfile): CanvasTextElement {
+  const productLine = conciseProductLine(result);
+  const { titleSource, subtitleSource } = pickImageTextSources({
+    productName: result.input.productName || result.title,
+    productLine,
+    thumbnail: result.thumbnails[0],
+    hook: result.hooks[0],
+    caption: getSelectedCaption(result)
+  });
+
   return {
-    title: result.thumbnails[0] ?? shortText(getSelectedCaption(result), result.input.productName || result.title),
-    subtitle: shortText(result.hooks[0] ?? getSelectedCaption(result), result.input.productName || result.title),
-    cta: result.ctas[0] ?? "저장하고 다시 보기",
-    brandName: result.brandName ?? result.input.brandName ?? brand.accountName,
-    disclosure: displayDisclosure(result.disclosure),
-    footer: result.input.discountCode ? `할인코드 ${result.input.discountCode}` : result.input.brandName || result.brandName || brand.accountName
+    // 이미지용 문구 권장 길이: 제목 10~18자, 보조문구 20~38자. 긴 캡션은 게시물 본문에만 남긴다.
+    // 렌더러와 같은 축약기(서술어·제품명 보존)를 써서 어절 중간 절단 없이 줄이고, 편집창과 실제 렌더 문구를 일치시킨다.
+    title: prepareCanvasImageText(normalizeImageText(titleSource), 18) || prepareCanvasImageText(normalizeImageText(productLine), 18),
+    subtitle: prepareCanvasImageText(normalizeImageText(subtitleSource), 38) || prepareCanvasImageText(normalizeImageText(productLine), 38),
+    cta: shortText(result.ctas[0] ?? "자세히 보기", "자세히 보기", 18),
+    brandName: imageBrandName(result, brand),
+    disclosure: shortText(displayDisclosure(result.disclosure), "", 24),
+    footer: ""
   };
 }
 
@@ -98,12 +217,13 @@ function defaultImageSettings(): CanvasImageSettings {
     scale: 1,
     offsetX: 0,
     offsetY: 0,
-    brightness: 96,
-    overlayOpacity: 0.38
+    // 업로드한 사진의 색과 선명도를 그대로 보존하는 것이 기본값이다.
+    brightness: 100,
+    overlayOpacity: 0.2
   };
 }
 
-function defaultOutputForResult(result: GeneratedPackage) {
+function defaultOutputForResult(result: Pick<GeneratedPackage, "platform">) {
   if (result.platform === "Instagram Story") return "instagram-story";
   if (result.platform === "Instagram Reels" || result.platform === "Reels Thumbnail") return "instagram-reels-thumbnail";
   if (result.platform === "TikTok") return "tiktok";
@@ -111,6 +231,19 @@ function defaultOutputForResult(result: GeneratedPackage) {
   if (result.platform === "Facebook") return "facebook-square";
   if (result.platform === "X") return "x-horizontal";
   return "instagram-feed-vertical";
+}
+
+// Studio 초기 크기는 이번 생성 결과의 플랫폼이 우선이다. 직전에 쓰던 프리셋(lastOutputPresetId)은
+// 같은 플랫폼일 때만 이어받아, Story 결과가 이전 Feed 4:5로 시작하는 문제를 막는다.
+export function resolveInitialOutputPresetId(result: Pick<GeneratedPackage, "platform">, lastOutputPresetId?: string) {
+  const fallbackId = defaultOutputForResult(result);
+  if (!lastOutputPresetId) {
+    return fallbackId;
+  }
+
+  const preferred = designOutputPresets.find((preset) => preset.id === lastOutputPresetId);
+  const platformDefault = getDesignOutputPreset(fallbackId);
+  return preferred && preferred.platform === platformDefault.platform ? preferred.id : fallbackId;
 }
 
 function normalizeProject(value: unknown): DesignProject | null {
@@ -146,12 +279,27 @@ function normalizeProject(value: unknown): DesignProject | null {
     },
     textPosition: raw.textPosition ?? template.textPosition,
     textAlignment: raw.textAlignment ?? template.textAlignment,
+    textPlacementMode: raw.textPlacementMode === "manual" ? "manual" : "auto",
+    textAnchorX:
+      raw.textAnchorX === "left" || raw.textAnchorX === "right"
+        ? raw.textAnchorX
+        : raw.textPosition === "right" || raw.textAlignment === "right"
+          ? "right"
+          : "left",
+    textSizePreset: raw.textSizePreset === "small" || raw.textSizePreset === "large" ? raw.textSizePreset : "medium",
+    watermarkPosition: raw.watermarkPosition === "bottom-left" || raw.watermarkPosition === "bottom-right" ? raw.watermarkPosition : "auto",
+    // 카테고리 필드가 없는 기존 저장 데이터는 자동 분류로 시작한다.
+    contentCategory:
+      raw.contentCategory === "fashion" || raw.contentCategory === "food" || raw.contentCategory === "general"
+        ? raw.contentCategory
+        : "auto",
     fontScale: typeof raw.fontScale === "number" ? raw.fontScale : template.fontScale,
     primaryColor: typeof raw.primaryColor === "string" ? raw.primaryColor : "#ff6b4a",
     secondaryColor: typeof raw.secondaryColor === "string" ? raw.secondaryColor : "#edf9f6",
     showTitle: raw.showTitle ?? true,
     showBrandName: raw.showBrandName ?? template.showBrandName,
-    showCta: raw.showCta ?? true,
+    // CTA 기본 숨김 정책 이전에 저장된 디자인(새 설정 필드가 없음)은 저장값과 무관하게 숨김으로 시작한다.
+    showCta: raw.textSizePreset === undefined ? false : raw.showCta === true,
     showDisclosure: raw.showDisclosure ?? template.showDisclosure,
     brandStyleSnapshot: raw.brandStyleSnapshot ?? {
       brandName: "",
@@ -197,12 +345,18 @@ export function createDefaultDesignProject(
     imageSettings: defaultImageSettings(),
     textPosition: template.textPosition,
     textAlignment: template.textAlignment,
+    textPlacementMode: "auto",
+    textAnchorX: "left",
+    textSizePreset: "medium",
+    watermarkPosition: "auto",
+    contentCategory: "auto",
     fontScale: template.fontScale,
     primaryColor: brandSnapshot.primaryColor,
     secondaryColor: brandSnapshot.secondaryColor,
     showTitle: true,
     showBrandName: template.showBrandName,
-    showCta: true,
+    // CTA는 이미지에 반드시 필요한 요소가 아니므로 기본 숨김. Results의 텍스트 CTA는 그대로 유지된다.
+    showCta: false,
     showDisclosure: template.showDisclosure,
     brandStyleSnapshot: brandSnapshot,
     uploadedAssetId: result.input.uploadedAssetId,

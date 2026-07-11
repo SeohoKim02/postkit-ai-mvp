@@ -5,6 +5,7 @@ dist
 build
 coverage
 qa-artifacts/
+qa-inputs/
 *.zip
 tsconfig.tsbuildinfo
 .env

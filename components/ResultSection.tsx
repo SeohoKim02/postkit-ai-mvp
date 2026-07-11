@@ -35,7 +35,7 @@ export function ResultSection({
           <h2 className="break-keep text-lg font-black">{title}</h2>
           {description ? <p className="mt-1 break-keep text-sm leading-6 text-muted">{description}</p> : null}
         </div>
-        <CopyButton label="전체 복사" onCopied={onCopyAll} value={items.join("\n")} />
+        {onCopyAll ? <CopyButton label="전체 복사" onCopied={onCopyAll} value={items.join("\n")} /> : null}
       </div>
       <div className="space-y-3">
         {items.map((item, index) => (
@@ -70,7 +70,7 @@ export function ResultSection({
                 {renderItem ? renderItem(item, index) : item}
               </div>
             </div>
-            <CopyButton onCopied={() => onCopyItem?.(item, index)} value={item} />
+            {onCopyItem ? <CopyButton onCopied={() => onCopyItem(item, index)} value={item} /> : null}
           </div>
         ))}
       </div>

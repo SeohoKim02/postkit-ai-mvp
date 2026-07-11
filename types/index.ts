@@ -800,6 +800,15 @@ export type DesignTextPosition = "top" | "center" | "bottom" | "left" | "right";
 
 export type DesignTextAlignment = "left" | "center" | "right";
 
+export type DesignTextAnchorX = "left" | "right";
+
+export type DesignTextSizePreset = "small" | "medium" | "large";
+
+// "auto"는 문구 키워드로 패션/음식·카페/일반을 추정하고, 나머지는 사용자가 고정한 카테고리다.
+export type DesignContentCategory = "auto" | "fashion" | "food" | "general";
+
+export type DesignWatermarkPosition = "auto" | "bottom-left" | "bottom-right";
+
 export type DesignOverlayStyle = "none" | "soft-dark" | "soft-light" | "gradient-bottom" | "brand-panel" | "blur-card";
 
 export type DesignFitMode = "cover" | "contain";
@@ -870,6 +879,13 @@ export type DesignProject = {
   imageSettings: CanvasImageSettings;
   textPosition: DesignTextPosition;
   textAlignment: DesignTextAlignment;
+  // "auto"면 렌더 시 사진 복잡도를 분석해 빈 코너를 고르고, 사용자가 위치를 직접 고르면 "manual"로 고정된다.
+  textPlacementMode?: "auto" | "manual";
+  // 텍스트 박스가 붙는 좌우 모서리. 정렬(textAlignment)은 박스 안 글줄 정렬만 담당한다.
+  textAnchorX?: DesignTextAnchorX;
+  textSizePreset?: DesignTextSizePreset;
+  watermarkPosition?: DesignWatermarkPosition;
+  contentCategory?: DesignContentCategory;
   fontScale: number;
   primaryColor: string;
   secondaryColor: string;

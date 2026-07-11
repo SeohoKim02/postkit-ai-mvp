@@ -626,8 +626,6 @@ export default function ResultsPage() {
 
           <ResultSection
             items={result.checklist}
-            onCopyAll={() => handleCopied("checklist", result.checklist.join("\n"))}
-            onCopyItem={(item) => handleCopied("checklist", item)}
             title="업로드 전 체크리스트"
           />
 
