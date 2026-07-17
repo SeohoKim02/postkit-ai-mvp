@@ -11,11 +11,10 @@ import { ResultSection } from "@/components/ResultSection";
 import { Badge } from "@/components/ui/Badge";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { generateUploadPackageWithAi } from "@/lib/ai/client";
-import { createAiRequestId, createGenerationIdempotencyKey } from "@/lib/ai/validation";
-import { getPurposeLabel, styles } from "@/lib/constants";
+import { getPurposeLabel } from "@/lib/constants";
 import { downloadJsonFile } from "@/lib/downloadUtils";
 import { getPlatformContentGuide } from "@/lib/platformGuidance";
+import { resolveInitialResultsViewState } from "@/lib/resultsViewState";
 import {
   recordCopiedResult,
   recordDislikedResult,
@@ -27,61 +26,15 @@ import {
   recordSelectedCaption
 } from "@/lib/learning";
 import {
-  defaultBrandProfile,
   getCurrentResult,
   getHistory,
-  getPersonalizationProfile,
   saveCurrentResult,
   savePrefill,
   saveHistory,
   updateHistoryResult,
   updatePersonalizationProfile
 } from "@/lib/storage";
-import type { CreateFormInput, GeneratedPackage, ResultCopyType } from "@/types";
-
-const sampleInput: CreateFormInput = {
-  platform: "Instagram Feed",
-  purpose: "Product Promotion",
-  style: styles[5] ?? styles[0],
-  productName: "글로우 립밤",
-  requiredKeywords: "촉촉함, 데일리, 선물 추천",
-  bannedKeywords: "완벽, 1위",
-  sponsorDisclosure: "gifted",
-  uploadedFileName: "sample-lipbalm.jpg"
-};
-
-function createSampleFallbackPackage(requestId: string): GeneratedPackage {
-  const now = new Date().toISOString();
-  const guide = getPlatformContentGuide(sampleInput.platform);
-
-  return {
-    id: `sample-${requestId}`,
-    title: "글로우 립밤 피드 콘텐츠",
-    createdAt: now,
-    platform: sampleInput.platform,
-    purpose: sampleInput.purpose,
-    style: sampleInput.style,
-    usedCredits: 0,
-    captions: [
-      "글로우 립밤은 건조한 날 가방에 넣고 다니기 좋은 제품입니다.\n촉촉함이 오래 가고, 데일리로 바르기에도 부담이 적어요.\n비슷한 립밤을 비교 중이라면 저장해두고 확인해보세요.",
-      "입술이 건조할 때 바로 꺼내 쓰기 좋은 립밤을 찾고 있다면\n글로우 립밤은 촉촉함과 휴대성을 같이 보기 좋습니다.\n선물용으로도 괜찮은지 댓글로 의견 남겨주세요.",
-      "선물용 립밤 고를 때는 패키지만큼 실제로 자주 쓸지도 보게 돼요.\n글로우 립밤은 색이 부담스럽지 않고, 데일리로 바르기 편한 쪽입니다.\n자세한 옵션은 프로필에서 확인해보세요.",
-      "글로우 립밤 써보고 괜찮았던 건 촉촉함 쪽이에요.\n가방에 넣고 다니기 편해서 건조할 때 바로 꺼내 쓰기 좋습니다.\n비슷한 제품과 비교 중이라면 이 글을 저장해두세요.",
-      "데일리 립밤 찾는 분이라면 글로우 립밤도 같이 봐도 괜찮아요.\n선물용으로도 과하지 않고, 매일 바르기 편한 사용감이 먼저 느껴집니다.\n궁금한 컬러는 댓글로 남겨주세요."
-    ],
-    hashtags: ["#글로우립밤", "#데일리립밤", "#촉촉립밤", "#선물템", "#데일리아이템"],
-    ctas: ["저장해두고 필요할 때 다시 확인해보세요.", "어떤 컬러가 더 좋은지 댓글로 남겨주세요.", "자세한 옵션은 프로필에서 확인해보세요."],
-    hooks: [],
-    thumbnails: [],
-    disclosure: "제품을 제공받아 직접 사용해본 뒤 작성했습니다.",
-    checklist: ["본문이 선택한 플랫폼 형식에 맞는지 확인", "광고/협찬 표시가 필요한 경우 앞부분에 배치", "금지 키워드와 과장 표현이 없는지 확인", "해시태그 수와 문구 길이가 적절한지 확인", "복사 후 최종 게시 화면에서 한 번 더 확인"],
-    packageItems: guide.packageItems,
-    input: sampleInput,
-    aiRequestId: requestId,
-    aiFallbackUsed: true,
-    aiWarnings: ["샘플 결과입니다. 실제 게시 전 문구를 한 번 더 확인해 주세요."]
-  };
-}
+import type { GeneratedPackage, ResultCopyType } from "@/types";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("ko-KR", {
@@ -127,50 +80,12 @@ export default function ResultsPage() {
   const [captionDraft, setCaptionDraft] = useState("");
 
   useEffect(() => {
-    let active = true;
-
-    async function loadResult() {
-      const current = getCurrentResult();
-
-      if (current) {
-        const history = getHistory();
-        if (!active) return;
-        setResult(current);
-        setIsSaved(history.some((item) => item.id === current.id));
-        setSelectedCaptionIndex(current.selectedCaptionIndex ?? 0);
-        setIsLoading(false);
-        return;
-      }
-
-      const requestId = createAiRequestId("sample");
-      let sample: GeneratedPackage;
-
-      try {
-        const sampleResponse = await generateUploadPackageWithAi({
-          requestId,
-          idempotencyKey: createGenerationIdempotencyKey(sampleInput),
-          input: sampleInput,
-          brandProfile: defaultBrandProfile,
-          personalizationProfile: getPersonalizationProfile(),
-          allowSafeRetry: true
-        });
-        sample = sampleResponse.generatedPackage ?? createSampleFallbackPackage(requestId);
-      } catch {
-        sample = createSampleFallbackPackage(requestId);
-      }
-
-      if (!active) return;
-      setResult(sample);
-      setIsSaved(false);
-      setSelectedCaptionIndex(sample.selectedCaptionIndex ?? 0);
-      setIsLoading(false);
-    }
-
-    loadResult();
-
-    return () => {
-      active = false;
-    };
+    const current = getCurrentResult();
+    const viewState = resolveInitialResultsViewState(current, current ? getHistory() : []);
+    setResult(viewState.result);
+    setIsSaved(viewState.isSaved);
+    setSelectedCaptionIndex(viewState.selectedCaptionIndex);
+    setIsLoading(false);
   }, []);
 
   const allText = useMemo(() => (result ? composePackage(result) : ""), [result]);
@@ -355,7 +270,7 @@ export default function ResultsPage() {
     downloadJsonFile(`${result.id}.json`, result);
   }
 
-  if (isLoading || !result) {
+  if (isLoading) {
     return (
       <AppShell>
         <div className="flex min-h-[60vh] items-center justify-center">
@@ -364,6 +279,37 @@ export default function ResultsPage() {
             <p className="mt-3 font-black">업로드용 결과를 준비하는 중</p>
           </div>
         </div>
+      </AppShell>
+    );
+  }
+
+  if (!result) {
+    return (
+      <AppShell>
+        <PageHeader
+          action={
+            <LinkButton href="/create" variant="primary">
+              <Sparkles size={17} aria-hidden="true" />
+              만들기 화면으로 이동
+            </LinkButton>
+          }
+          description="결과 페이지는 저장된 생성 결과가 있을 때만 표시됩니다. 주소를 직접 열거나 새로고침해도 AI 생성을 자동으로 시작하지 않습니다."
+          eyebrow="Results"
+          title="생성된 결과가 없습니다"
+        />
+        <Card className="mt-5">
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <h2 className="break-keep text-lg font-black">새 콘텐츠를 먼저 만들어 주세요</h2>
+              <p className="mt-2 break-keep text-sm leading-6 text-muted">
+                생성 버튼을 누른 뒤 저장된 결과가 있으면 이곳에서 캡션, 해시태그, CTA, 내보내기 흐름을 이어갈 수 있습니다.
+              </p>
+            </div>
+            <LinkButton className="w-full sm:w-auto" href="/create" variant="secondary">
+              새 게시물 만들기
+            </LinkButton>
+          </div>
+        </Card>
       </AppShell>
     );
   }
