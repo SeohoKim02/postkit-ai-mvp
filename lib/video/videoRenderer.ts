@@ -424,6 +424,7 @@ export async function renderVideoToWebM({
       if (finished) return;
       finished = true;
       if (raf) window.cancelAnimationFrame(raf);
+      signal?.removeEventListener("abort", abort);
       stream.getTracks().forEach((track) => track.stop());
       resolve(result);
     }

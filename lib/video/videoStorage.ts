@@ -108,6 +108,21 @@ function normalizeImageItems(value: unknown): VideoImageItem[] {
     .filter((item) => item.assetId);
 }
 
+function imageItemsFromResult(result: GeneratedPackage): VideoImageItem[] {
+  if (!result.input.uploadedAssetId) {
+    return [];
+  }
+
+  return [
+    {
+      assetId: result.input.uploadedAssetId,
+      name: result.input.uploadedFileName ?? "uploaded-image",
+      type: result.input.uploadedFileType ?? "image/*",
+      size: 0
+    }
+  ];
+}
+
 function normalizeProject(value: unknown): VideoProject | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const raw = value as Partial<VideoProject>;
@@ -189,7 +204,7 @@ export function createDefaultVideoProject(
     showBrandName: template.showBrandName,
     showDisclosure: template.showDisclosure,
     text: makeVideoText(result, brand),
-    imageItems: [],
+    imageItems: imageItemsFromResult(result),
     brandStyleSnapshot: snapshotBrand(brand),
     outputFormat: "webm",
     generatedAt: undefined,

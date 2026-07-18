@@ -55,7 +55,7 @@ import {
   saveVideoPreferences,
   upsertVideoProject
 } from "@/lib/video/videoStorage";
-import { createVideoObjectUrl, getVideoExportAsset, storeVideoExportAsset } from "@/lib/video/videoSessionStore";
+import { createVideoObjectUrl, getVideoExportAsset, revokeVideoObjectUrl, storeVideoExportAsset } from "@/lib/video/videoSessionStore";
 import {
   buildVideoFramePlan,
   composeVideoTextPack,
@@ -112,6 +112,7 @@ export default function VideoStudioPage() {
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const generatingRef = useRef(false);
   const previewTimeRef = useRef(0);
   const [result, setResult] = useState<GeneratedPackage | null>(null);
   const [project, setProject] = useState<VideoProject | null>(null);
@@ -167,14 +168,26 @@ export default function VideoStudioPage() {
   const settings = useMemo(() => (project ? projectToRenderSettings(project) : null), [project]);
 
   useEffect(() => {
-    if (!project || !generatedAsset?.blob) {
+    if (!project?.id || !generatedAsset?.blob) {
       setVideoUrl("");
       return;
     }
 
-    const url = createVideoObjectUrl(project.id);
+    const projectId = project.id;
+    const url = createVideoObjectUrl(projectId);
     setVideoUrl(url);
-  }, [generatedAsset?.blob, generatedAsset?.createdAt, generatedAsset?.videoProjectId, project]);
+    return () => {
+      revokeVideoObjectUrl(projectId);
+    };
+  }, [generatedAsset?.blob, generatedAsset?.createdAt, generatedAsset?.videoProjectId, project?.id]);
+
+  useEffect(() => {
+    return () => {
+      generatingRef.current = false;
+      abortRef.current?.abort();
+      abortRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     if (!project || !settings || !canvasRef.current) return;
@@ -402,7 +415,7 @@ export default function VideoStudioPage() {
   }
 
   async function handleGenerate() {
-    if (!project || !settings || isGenerating) return;
+    if (!project || !settings || isGenerating || generatingRef.current) return;
 
     if (imageUrls.length === 0) {
       setError("사진을 1장 이상 추가해야 영상 미리보기와 다운로드를 만들 수 있어요.");
@@ -414,6 +427,7 @@ export default function VideoStudioPage() {
       return;
     }
 
+    generatingRef.current = true;
     setIsGenerating(true);
     setProgress(0);
     setError("");
@@ -428,6 +442,7 @@ export default function VideoStudioPage() {
     });
 
     if (!saved) {
+      generatingRef.current = false;
       setIsGenerating(false);
       return;
     }
@@ -451,6 +466,7 @@ export default function VideoStudioPage() {
         errorMessage: renderResult.error,
         outputFormat: "webm"
       });
+      generatingRef.current = false;
       setIsGenerating(false);
       abortRef.current = null;
       return;
@@ -479,6 +495,7 @@ export default function VideoStudioPage() {
     });
     setVideoUrl(createVideoObjectUrl(saved.id));
     setProgress(100);
+    generatingRef.current = false;
     setIsGenerating(false);
     abortRef.current = null;
     flash("WebM 영상 생성이 완료됐어요.");
@@ -487,6 +504,7 @@ export default function VideoStudioPage() {
   function handleCancelGenerate() {
     abortRef.current?.abort();
     abortRef.current = null;
+    generatingRef.current = false;
     setIsGenerating(false);
     setProgress(0);
   }
